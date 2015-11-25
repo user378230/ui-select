@@ -1,0 +1,17 @@
+<h3>Basic Header and Footer</h3>
+<p>Selected: {{ctrl.address.selected.formatted_address}}</p>
+<ui-select ng-model="ctrl.address.selected"
+           theme="bootstrap"
+           ng-disabled="ctrl.disabled"
+           reset-search-input="false"
+           style="width: 300px;"
+           title="Choose an address">
+  <ui-select-match placeholder="Enter an address...">{{$select.selected.formatted_address}}</ui-select-match>
+  <ui-select-header><h4>Simple Header</h4></ui-select-header>
+  <ui-select-choices repeat="address in ctrl.addresses track by $index"
+           refresh="refreshAddresses($select.search)"
+           refresh-delay="0">
+    <div ng-bind-html="address.formatted_address | highlight: $select.search"></div>
+  </ui-select-choices>
+  <ui-select-footer><strong>Simple Footer</strong></ui-select-footer>
+</ui-select>
