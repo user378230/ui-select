@@ -413,7 +413,7 @@ describe('ui-select tests', function() {
     openDropdown(el);
 
     var generatedId = el.scope().$select.generatedId;
-    expect($(el).find('[id$="row-' + generatedId + '-0"]').length).toEqual(1);
+    expect($(el).find('#ui-select-choices-row-' + generatedId + '-0').length).toEqual(1);
   });
 
   it('should utilize wrapper directive ng-model', function() {
