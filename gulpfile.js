@@ -6,6 +6,7 @@ var karma = require('karma').server;
 var $ = require('gulp-load-plugins')();
 var runSequence = require('run-sequence');
 var conventionalRecommendedBump = require('conventional-recommended-bump');
+var titleCase = require('title-case');
 
 var config = {
   pkg : JSON.parse(fs.readFileSync('./package.json')),
@@ -151,6 +152,41 @@ gulp.task('tag', function() {
 
 gulp.task('bump', function(done) {
   runSequence('recommendedBump', 'changelog', 'add', 'commit', 'tag', 'push', done);
+});
+
+gulp.task('docs', function (cb) {
+  runSequence('docs:clean', 'docs:examples', 'docs:assets', 'docs:index', cb);
+});
+
+gulp.task('docs:clean', function (cb) {
+  del(['docs'], cb)
+});
+
+gulp.task('docs:assets', function () {
+  return gulp.src('examples/assets/*').pipe(gulp.dest('./docs/assets'));
+});
+
+gulp.task('docs:examples', function () {
+  return gulp.src(['examples/*.html'])
+    .pipe($.filenames('exampleFiles'))
+    .pipe($.header(fs.readFileSync('examples/partials/_header.html')))
+    .pipe($.footer(fs.readFileSync('examples/partials/_footer.html')))
+    .pipe(gulp.dest('./docs/'));
+});
+
+gulp.task('docs:index', function () {
+
+  var exampleFiles = $.filenames.get('exampleFiles');
+  exampleFiles = exampleFiles.map(function (filename) {
+    var cleaned = titleCase(filename.replace('demo-', '').replace('.html', ''));
+    return '<h4><a href="./' + filename + '">' + cleaned + '</a></h5>';
+  });
+
+  return gulp.src('examples/partials/_index.html')    
+    .pipe($.replace('<!-- INSERT EXAMPLES HERE -->', exampleFiles.join("\n")))    
+    .pipe($.concat('index.html'))
+    .pipe(gulp.dest('./docs/'));
+
 });
 
 var handleError = function (err) {
