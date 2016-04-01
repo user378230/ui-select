@@ -163,6 +163,7 @@ gulp.task('docs:clean', function (cb) {
 });
 
 gulp.task('docs:assets', function () {
+  gulp.src('./dist/*').pipe(gulp.dest('./docs/dist'));
   return gulp.src('examples/assets/*').pipe(gulp.dest('./docs/assets'));
 });
 
@@ -179,7 +180,7 @@ gulp.task('docs:index', function () {
   var exampleFiles = $.filenames.get('exampleFiles');
   exampleFiles = exampleFiles.map(function (filename) {
     var cleaned = titleCase(filename.replace('demo-', '').replace('.html', ''));
-    return '<h4><a href="./' + filename + '">' + cleaned + '</a></h5>';
+    return '<h4><a href="./' + filename + '">' + cleaned + '</a> <plnkr-opener example-path="' + filename + '"></plunkr-opener></h4>';
   });
 
   return gulp.src('examples/partials/_index.html')    
