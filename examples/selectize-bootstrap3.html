@@ -1,4 +1,24 @@
-﻿  <p>Selected: {{ctrl.person.selected.name}}</p>
+﻿  <style>
+    body {
+      padding: 15px;
+    }
+
+    .selectize-control {
+      /* Align Selectize with input-group-btn */
+      top: 2px;
+    }
+
+      .selectize-control > .selectize-dropdown {
+        top: 34px;
+      }
+
+    /* Reset right rounded corners, see Bootstrap input-groups.less */
+    .input-group > .selectize-control > .selectize-input {
+      border-bottom-right-radius: 0;
+      border-top-right-radius: 0;
+    }    
+  </style>  
+  <p>Selected: {{ctrl.person.selected.name}}</p>
 
   <form class="form-horizontal">
     <fieldset>
