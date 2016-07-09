@@ -128,7 +128,26 @@ var uis = angular.module('ui.select', [])
       }
     };
 })
+.filter('uisGroupFilter', ['$filter', function($filter) {
+  return function(groups, definition) {
 
+    if(!angular.isArray(groups)) return groups;
+
+    var filterDefintion = [];
+
+    if(angular.isString(definition)) { 
+      filterDefintion = [definition];
+    } else if(angular.isArray(definition)) {
+      filterDefintion = definition;
+    }
+
+    if(filterDefintion.length === 0) return groups;
+
+    return $filter('filter')(groups, function(group) {
+      return filterDefintion.indexOf(group.name) > -1;
+    });
+  };
+}])
 /**
  * Highlights text that matches $select.search.
  *

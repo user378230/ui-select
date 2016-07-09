@@ -39,7 +39,13 @@ app.filter('propsFilter', function() {
     return out;
   };
 });
+app.filter('reverseOrderFilterFn', function() {
+  return function(items) {
+    if(!angular.isArray(items)) return items;
 
+    return items.slice().reverse();
+  };
+});
 app.controller('DemoCtrl', function ($scope, $http, $timeout, $interval) {
   var vm = this;
 
@@ -84,10 +90,6 @@ app.controller('DemoCtrl', function ($scope, $http, $timeout, $interval) {
 
   vm.firstLetterGroupFn = function (item){
       return item.name[0];
-  };
-
-  vm.reverseOrderFilterFn = function(groups) {
-    return groups.reverse();
   };
 
   vm.personAsync = {selected : "wladimir@email.com"};

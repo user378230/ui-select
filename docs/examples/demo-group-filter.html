@@ -7,19 +7,37 @@
   <p>Selected: {{country.selected}}</p>
 
 
-  <h3> Filter groups by array <small><code>group-filter="['Z','B','C']"</code></small></h3>
+  <h3> Filter groups by name <small><code>group by ctrl.firstLetterGroupFn(country) | filter:{name: 'Z'}</code></small></h3>
   <ui-select ng-model="ctrl.country.selected" theme="select2" ng-disabled="ctrl.disabled" style="width: 300px;" title="Choose a country">
     <ui-select-match placeholder="Select or search a country in the list...">{{$select.selected.name}}</ui-select-match>
-    <ui-select-choices group-by="ctrl.firstLetterGroupFn" group-filter="['Z','B','C']" repeat="country in ctrl.countries | filter: $select.search">
+    <ui-select-choices repeat="country in ctrl.countries | filter: $select.search group by ctrl.firstLetterGroupFn(country) | filter:{name: 'Z'}">
       <span ng-bind-html="country.name | highlight: $select.search"></span>
       <small ng-bind-html="country.code | highlight: $select.search"></small>
     </ui-select-choices>
   </ui-select>
 
-  <h3>Filter groups using a function <small><code>group-filter="reverseOrderFilterFn"</code></small></h3>
+  <h3> Filter groups by string <small><code>group by ctrl.firstLetterGroupFn(country) | uisGroupFilter:'Z'</code></small></h3>
   <ui-select ng-model="ctrl.country.selected" theme="select2" ng-disabled="ctrl.disabled" style="width: 300px;" title="Choose a country">
     <ui-select-match placeholder="Select or search a country in the list...">{{$select.selected.name}}</ui-select-match>
-    <ui-select-choices group-by="ctrl.firstLetterGroupFn" group-filter="reverseOrderFilterFn" repeat="country in ctrl.countries | filter: $select.search">
+    <ui-select-choices repeat="country in ctrl.countries | filter: $select.search group by ctrl.firstLetterGroupFn(country) | uisGroupFilter:'Z'">
+      <span ng-bind-html="country.name | highlight: $select.search"></span>
+      <small ng-bind-html="country.code | highlight: $select.search"></small>
+    </ui-select-choices>
+  </ui-select>
+
+  <h3> Filter groups by array <small><code>group by ctrl.firstLetterGroupFn(country) | uisGroupFilter:['A', 'B', 'C']</code></small></h3>
+  <ui-select ng-model="ctrl.country.selected" theme="select2" ng-disabled="ctrl.disabled" style="width: 300px;" title="Choose a country">
+    <ui-select-match placeholder="Select or search a country in the list...">{{$select.selected.name}}</ui-select-match>
+    <ui-select-choices repeat="country in ctrl.countries | filter: $select.search group by ctrl.firstLetterGroupFn(country) | uisGroupFilter:['A', 'B', 'C']">
+      <span ng-bind-html="country.name | highlight: $select.search"></span>
+      <small ng-bind-html="country.code | highlight: $select.search"></small>
+    </ui-select-choices>
+  </ui-select>
+
+  <h3>Filter groups using a function <small><code>group by ctrl.firstLetterGroupFn(country) | reverseOrderFilterFn</code></small></h3>
+  <ui-select ng-model="ctrl.country.selected" theme="select2" ng-disabled="ctrl.disabled" style="width: 300px;" title="Choose a country">
+    <ui-select-match placeholder="Select or search a country in the list...">{{$select.selected.name}}</ui-select-match>
+    <ui-select-choices repeat="country in ctrl.countries | filter: $select.search  group by ctrl.firstLetterGroupFn(country) | reverseOrderFilterFn">
       <span ng-bind-html="country.name | highlight: $select.search"></span>
       <small ng-bind-html="country.code | highlight: $select.search"></small>
     </ui-select-choices>

@@ -21,23 +21,20 @@ uis.directive('uiSelectChoices',
       if (!tAttrs.repeat) throw uiSelectMinErr('repeat', "Expected 'repeat' expression.");
 
       // var repeat = RepeatParser.parse(attrs.repeat);
-      var groupByExp = tAttrs.groupBy;
-      var groupFilterExp = tAttrs.groupFilter;
+      var parserResult = RepeatParser.parse(tAttrs.repeat);
 
-      if (groupByExp) {
+      if (parserResult.groupByExp) {
         var groups = tElement.querySelectorAll('.ui-select-choices-group');
         if (groups.length !== 1) throw uiSelectMinErr('rows', "Expected 1 .ui-select-choices-group but got '{0}'.", groups.length);
-        groups.attr('ng-repeat', RepeatParser.getGroupNgRepeatExpression());
+        groups.attr('ng-repeat', '$group in $select.groups ' + ( parserResult.groupByFilter || ''));
       }
-
-      var parserResult = RepeatParser.parse(tAttrs.repeat);
 
       var choices = tElement.querySelectorAll('.ui-select-choices-row');
       if (choices.length !== 1) {
         throw uiSelectMinErr('rows', "Expected 1 .ui-select-choices-row but got '{0}'.", choices.length);
       }
 
-      choices.attr('ng-repeat', parserResult.repeatExpression(groupByExp))
+      choices.attr('ng-repeat', parserResult.repeatExpression(parserResult.groupByExp))
              .attr('ng-if', '$select.open'); //Prevent unnecessary watches when dropdown is closed
     
 
@@ -54,7 +51,7 @@ uis.directive('uiSelectChoices',
       return function link(scope, element, attrs, $select) {
 
        
-        $select.parseRepeatAttr(attrs.repeat, groupByExp, groupFilterExp); //Result ready at $select.parserResult
+        $select.parseRepeatAttr(attrs.repeat); //Result ready at $select.parserResult
 
         $select.disableChoiceExpression = attrs.uiDisableChoice;
         $select.onHighlightCallback = attrs.onHighlight;

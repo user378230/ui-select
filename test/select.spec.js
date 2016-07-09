@@ -69,10 +69,19 @@ describe('ui-select tests', function() {
   beforeEach(module('ngSanitize', 'ui.select', 'wrapperDirective', 'testValidator'));
 
   beforeEach(function() {
-    module(function($provide) {
+    module(function($provide, $filterProvider) {
       $provide.factory('uisOffset', function() {
         return function(el) {
           return {top: 100, left: 200, width: 300, height: 400};
+        };
+      });
+
+      $filterProvider.register('invertOrder', function() {
+        return function(groups) {
+          if(!angular.isArray(groups)) return;
+          return groups.slice().sort(function(groupA, groupB){
+            return groupA.name.toLocaleLowerCase() < groupB.name.toLocaleLowerCase();
+          });
         };
       });
     });
@@ -87,16 +96,9 @@ describe('ui-select tests', function() {
     uisRepeatParser = _uisRepeatParser_;
     scope.selection = {};
 
-    scope.getGroupLabel = function(person) {
+    scope.getGroupByLabel = function(person) {
       return person.age % 2 ? 'even' : 'odd';
     };
-
-    scope.filterInvertOrder = function(groups) {
-      return groups.sort(function(groupA, groupB){
-        return groupA.name.toLocaleLowerCase() < groupB.name.toLocaleLowerCase();
-      });
-    };
-
 
     scope.people = [
       { name: 'Adam',      email: 'adam@email.com',      group: 'Foo', age: 12 },
@@ -384,6 +386,70 @@ describe('ui-select tests', function() {
 
   });
 
+  describe("parsing group by expresson", function() {
+    it('should parse a simple expression', function() {
+      
+      var parserResult = uisRepeatParser.parse('person in people group by person.country');
+      expect(parserResult.itemName).toBe('person');
+      expect(parserResult.groupByExp).toBe('person.country');
+    });
+
+    it('should parse simple grouping function expression', function() {
+    
+      var parserResult = uisRepeatParser.parse('person in people group by someGroupingFn(person)');
+      expect(parserResult.itemName).toBe('person');
+      expect(parserResult.groupByExp).toBe('someGroupingFn(person)');
+    });
+
+    it('should parse any grouping filters', function() {
+      
+      var parserResult = uisRepeatParser.parse('person in people group by person.country | filter:{name: "usa"}');
+      expect(parserResult.itemName).toBe('person');
+      expect(parserResult.groupByExp).toBe('person.country');
+      expect(parserResult.groupByFilter).toBe('| filter:{name: "usa"}');
+    });
+
+     it('should parse fallback grouping expression', function() {
+    
+      var parserResult = uisRepeatParser.parse('person in people group by (person.firstName || person.lastName)');
+      expect(parserResult.itemName).toBe('person');
+      expect(parserResult.groupByExp).toBe('(person.firstName || person.lastName)');
+    });
+
+    it('should parse group by in a complex expression', function() {
+
+      var parserResult = uisRepeatParser.parse('person.name as person in (peopleNothing || people) track by person.id group by person.country');
+      expect(parserResult.itemName).toBe('person');
+      expect(parserResult.groupByExp).toBe('person.country');
+    });
+
+   it('should get group name using simple group by property', function() {
+      
+      var person = {name: 'Wladimir', country: 'usa'};
+
+      var parserResult = uisRepeatParser.parse('person in people group by person.country');
+      var groupingFn = parserResult.getGroupingFn({});
+      expect(groupingFn(person)).toBe('usa');
+    });
+
+    it('should call grouping function if specified', function() {
+      var repeatScope = { someGroupingFn: function(item) {
+        // group by reversed country (just so we know the function has been called)
+        return item.country.split('').reverse().join('');
+      }};
+
+      var person = {name: 'Wladimir', country: 'usa'};
+
+      var parserResult = uisRepeatParser.parse('person in people group by someGroupingFn(person)');
+      var groupingFn = parserResult.getGroupingFn(repeatScope);
+      expect(groupingFn(person)).toBe('asu');
+    });
+  });
+ 
+  
+ 
+
+ 
   it('should not leak memory', function() {
     var cacheLenght = Object.keys(angular.element.cache).length;
     createUiSelect().remove();
@@ -974,7 +1040,7 @@ describe('ui-select tests', function() {
       return compileTemplate(
           '<ui-select ng-model="selection.selected"> \
         <ui-select-match placeholder="Pick one...">{{$select.selected.name}}</ui-select-match> \
-        <ui-select-choices group-by="\'group\'" repeat="person in people | filter: $select.search"> \
+        <ui-select-choices repeat="person in people | filter: $select.search group by person.group"> \
           <div ng-bind-html="person.name | highlight: $select.search"></div> \
           <div ng-bind-html="person.email | highlight: $select.search"></div> \
         </ui-select-choices> \
@@ -1026,7 +1092,7 @@ describe('ui-select tests', function() {
       return compileTemplate(
         '<ui-select ng-model="selection.selected"> \
       <ui-select-match placeholder="Pick one...">{{$select.selected.name}}</ui-select-match> \
-      <ui-select-choices group-by="getGroupLabel" repeat="person in people | filter: $select.search"> \
+      <ui-select-choices repeat="person in people | filter: $select.search group by getGroupByLabel(person)"> \
         <div ng-bind-html="person.name | highlight: $select.search"></div> \
       </ui-select-choices> \
     </ui-select>'
@@ -1045,7 +1111,7 @@ describe('ui-select tests', function() {
       return compileTemplate('\
         <ui-select ng-model="selection.selected"> \
           <ui-select-match placeholder="Pick one...">{{$select.selected.name}}</ui-select-match> \
-          <ui-select-choices group-by="\'group\'" group-filter="filterInvertOrder"  repeat="person in people | filter: $select.search"> \
+          <ui-select-choices repeat="person in people | filter: $select.search group by person.group | invertOrder"> \
             <div ng-bind-html="person.name | highlight: $select.search"></div> \
           </ui-select-choices> \
         </ui-select>'
@@ -1064,8 +1130,7 @@ describe('ui-select tests', function() {
       return compileTemplate('\
         <ui-select ng-model="selection.selected"> \
           <ui-select-match placeholder="Pick one...">{{$select.selected.name}}</ui-select-match> \
-          <ui-select-choices group-by="\'group\'" group-filter="[\'Foo\']" \
-              repeat="person in people | filter: $select.search"> \
+          <ui-select-choices repeat="person in people | filter: $select.search group by person.group | filter:{name: \'Foo\'}"> \
             <div ng-bind-html="person.name | highlight: $select.search"></div> \
           </ui-select-choices> \
         </ui-select>'
@@ -1109,7 +1174,7 @@ describe('ui-select tests', function() {
           <ui-select-choices repeat="incorrect format people"></ui-select-choices> \
       </ui-select>'
       );
-    }).toThrow(new Error('[ui.select:iexp] Expected expression in form of \'_item_ in _collection_[ track by _id_]\' but got \'incorrect format people\'.'));
+    }).toThrow();
   });
 
   it('should throw when no ui-select-match found', function() {
@@ -1745,6 +1810,7 @@ describe('ui-select tests', function() {
 
     function createUiSelectMultiple(attrs) {
         var attrsHtml = '',
+            groupByHtml = '',  
             choicesAttrsHtml = '',
             matchesAttrsHtml = '';
         if (attrs !== undefined) {
@@ -1756,14 +1822,14 @@ describe('ui-select tests', function() {
             if (attrs.taggingTokens !== undefined) { attrsHtml += ' tagging-tokens="' + attrs.taggingTokens + '"'; }
             if (attrs.taggingLabel !== undefined) { attrsHtml += ' tagging-label="' + attrs.taggingLabel + '"'; }
             if (attrs.inputId !== undefined) { attrsHtml += ' input-id="' + attrs.inputId + '"'; }
-            if (attrs.groupBy !== undefined) { choicesAttrsHtml += ' group-by="' + attrs.groupBy + '"'; }
+            if (attrs.groupBy !== undefined) { groupByHtml += ' group by ' + attrs.groupBy; }
             if (attrs.lockChoice !== undefined) { matchesAttrsHtml += ' ui-lock-choice="' + attrs.lockChoice + '"'; }
         }
 
         return compileTemplate(
             '<ui-select multiple ng-model="selection.selectedMultiple"' + attrsHtml + ' theme="bootstrap" style="width: 800px;"> \
                 <ui-select-match "' + matchesAttrsHtml + ' placeholder="Pick one...">{{$item.name}} &lt;{{$item.email}}&gt;</ui-select-match> \
-                <ui-select-choices repeat="person in people | filter: $select.search"' + choicesAttrsHtml + '> \
+                <ui-select-choices repeat="person in people | filter: $select.search' + groupByHtml + '"' + choicesAttrsHtml + '> \
                   <div ng-bind-html="person.name | highlight: $select.search"></div> \
                   <div ng-bind-html="person.email | highlight: $select.search"></div> \
                 </ui-select-choices> \
@@ -2509,7 +2575,7 @@ describe('ui-select tests', function() {
       expect(el.find('.ui-select-choices-row-inner').size()).toBe(0);
     });
 
-    it('should allow creating tag in multi select mode with tagging and group-by enabled', function() {
+    it('should allow creating tag in multi select mode with tagging and group by enabled', function() {
       scope.taggingFunc = function (name) {
         return {
           name: name,
@@ -2519,7 +2585,7 @@ describe('ui-select tests', function() {
         };
       };
 
-      var el = createUiSelectMultiple({tagging: 'taggingFunc', groupBy: "'age'"});
+      var el = createUiSelectMultiple({tagging: 'taggingFunc', groupBy: "person.age"});
 
       showChoicesForSearch(el, 'amal');
       expect(el.find('.ui-select-choices-row-inner').size()).toBe(2);
@@ -2880,4 +2946,36 @@ describe('ui-select tests', function() {
     });
   });
 
+  describe('uisGroupFilter filter', function() {
+    var groupFilter;
+    var testArray = [
+        {name: 'group1'},
+        {name: 'group2'},
+        {name: 'group3'},
+        {name: 'group4'},
+        {name: 'group5'} 
+    ];
+
+    beforeEach(function() {
+      groupFilter = $injector.get('uisGroupFilterFilter'); 
+    });
+
+    it('should return all items if no filter arguments are give', function() {
+      expect(groupFilter(testArray)).toEqual(testArray);  
+    });
+
+    it('should, if given a string, return only groups with that matching name property', function () {
+      expect(groupFilter(testArray, 'group1')).toEqual([{ name: 'group1' }]);
+    });
+
+    it('should, if given an array, return any groups with a name property specified in the array', function () {
+      expect(groupFilter(testArray, ['group1', 'group2'])).toEqual([{ name: 'group1' }, { name: 'group2' }]);
+    });
+
+    it('should, if given an array, return any groups with a name property specified in the array (incl. dupes)', function () {
+      var testArray2 = testArray.slice();
+      testArray2.push({ name: 'group2' });
+      expect(groupFilter(testArray2, ['group1', 'group2'])).toEqual([{ name: 'group1' }, { name: 'group2' }, { name: 'group2' }]);  
+    });
+  });
 });

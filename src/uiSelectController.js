@@ -94,17 +94,17 @@ uis.controller('uiSelectCtrl',
     }
   }
 
-    function _groupsFilter(groups, groupNames) {
-      var i, j, result = [];
-      for(i = 0; i < groupNames.length ;i++){
-        for(j = 0; j < groups.length ;j++){
-          if(groups[j].name == [groupNames[i]]){
-            result.push(groups[j]);
-          }
-        }
-      }
-      return result;
-    }
+    // function _groupsFilter(groups, groupNames) {
+    //   var i, j, result = [];
+    //   for(i = 0; i < groupNames.length ;i++){
+    //     for(j = 0; j < groups.length ;j++){
+    //       if(groups[j].name == [groupNames[i]]){
+    //         result.push(groups[j]);
+    //       }
+    //     }
+    //   }
+    //   return result;
+    // }
 
   // When the user clicks on ui-select, displays the dropdown list
   ctrl.activate = function(initSearchValue, avoidReset) {
@@ -169,43 +169,43 @@ uis.controller('uiSelectCtrl',
     })[0];
   };
 
-  ctrl.parseRepeatAttr = function(repeatAttr, groupByExp, groupFilterExp) {
+  ctrl.parseRepeatAttr = function(repeatAttr) {
+    
     function updateGroups(items) {
-      var groupFn = $scope.$eval(groupByExp);
       ctrl.groups = [];
-      angular.forEach(items, function(item) {
-        var groupName = angular.isFunction(groupFn) ? groupFn(item) : item[groupFn];
-        var group = ctrl.findGroupByName(groupName);
-        if(group) {
-          group.items.push(item);
+
+      var groupingFn = ctrl.parserResult.getGroupingFn($scope);
+
+      angular.forEach(items, function (item) {
+        var itemGroupName = groupingFn(item);
+        var group = ctrl.findGroupByName(itemGroupName);
+        if (!group) {
+          group = { name: itemGroupName, items: [] };
+          ctrl.groups.push(group);
         }
-        else {
-          ctrl.groups.push({name: groupName, items: [item]});
-        }
+        
+        group.items.push(item);
       });
-      if(groupFilterExp){
-        var groupFilterFn = $scope.$eval(groupFilterExp);
-        if( angular.isFunction(groupFilterFn)){
-          ctrl.groups = groupFilterFn(ctrl.groups);
-        } else if(angular.isArray(groupFilterFn)){
-          ctrl.groups = _groupsFilter(ctrl.groups, groupFilterFn);
-        }
+
+      if(ctrl.parserResult.groupByFilter) {
+        // Prevent filtered groups from adding to ctrl.items
+        var filteredGroups = $scope.$eval('$select.groups ' + ctrl.parserResult.groupByFilter);
+        var filteredItems = filteredGroups.map(function(g) { return g.items; });
+        ctrl.items = [].concat.apply([], filteredItems);      
+      } else {
+        ctrl.items = items;
       }
-      ctrl.items = [];
-      ctrl.groups.forEach(function(group) {
-        ctrl.items = ctrl.items.concat(group.items);
-      });
     }
 
     function setPlainItems(items) {
       ctrl.items = items;
     }
 
-    ctrl.setItemsFn = groupByExp ? updateGroups : setPlainItems;
-
     ctrl.parserResult = RepeatParser.parse(repeatAttr);
+    ctrl.isGrouped = !!ctrl.parserResult.groupByExp;
 
-    ctrl.isGrouped = !!groupByExp;
+    ctrl.setItemsFn = ctrl.isGrouped ? updateGroups : setPlainItems;
+
     ctrl.itemProperty = ctrl.parserResult.itemName;
 
     //If collection is an Object, convert it to Array

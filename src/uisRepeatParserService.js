@@ -26,8 +26,8 @@ uis.service('uisRepeatParser', ['uiSelectMinErr','$parse', function(uiSelectMinE
     // If an array is used as collection
 
     // if (isObjectCollection){
-    // 000000000000000000000000000000111111111000000000000000222222222222220033333333333333333333330000444444444444444444000000000000000055555555555000000000000000000000066666666600000000
-    match = expression.match(/^\s*(?:([\s\S]+?)\s+as\s+)?(?:([\$\w][\$\w]*)|(?:\(\s*([\$\w][\$\w]*)\s*,\s*([\$\w][\$\w]*)\s*\)))\s+in\s+(\s*[\s\S]+?)?(?:\s+track\s+by\s+([\s\S]+?))?\s*$/);
+    // 0000000000000000000000000000001111111110000000000000002222222222222200333333333333333333333300004444444444444444440000000000000000555555555550000000000000000000000666666666000000000000000000000777777777000
+    match = expression.match(/^\s*(?:([\s\S]+?)\s+as\s+)?(?:([\$\w][\$\w]*)|(?:\(\s*([\$\w][\$\w]*)\s*,\s*([\$\w][\$\w]*)\s*\)))\s+in\s+(\s*[\s\S]+?)?(?:\s+track\s+by\s+([\s\S]+?))?(?:\s+group\s+by\s+([\s\S]+?))?\s*$/);
 
     // 1 Alias
     // 2 Item
@@ -35,9 +35,10 @@ uis.service('uisRepeatParser', ['uiSelectMinErr','$parse', function(uiSelectMinE
     // 4 Value on (key,value)
     // 5 Source expression (including filters)
     // 6 Track by
+    // 7 Group by expression (including filters)
 
     if (!match) {
-      throw uiSelectMinErr('iexp', "Expected expression in form of '_item_ in _collection_[ track by _id_]' but got '{0}'.",
+      throw uiSelectMinErr('iexp', "Expected expression in form of '_item_ in _collection_[ track by _id_][ group by _property_or_func_[ |_group_filter_exp]] ]' but got '{0}'.",
               expression);
     }
     
@@ -58,12 +59,40 @@ uis.service('uisRepeatParser', ['uiSelectMinErr','$parse', function(uiSelectMinE
       }      
     }
 
+    var itemName = match[4] || match[2];
+
+    var groupByExp = match[7],
+      groupByFilters = '',
+      getGroupingFn;
+
+    if(match[7]) {         
+      // match all after | but not after ||
+      var groupFilterMatch = match[7].match(/^\s*(?:[\s\S]+?)(?:[^\|]|\|\|)+([\s\S]*)\s*$/);
+      if(groupFilterMatch && groupFilterMatch[1].trim()) {
+        // TODO: Consider checking for enclosing parenthesis?
+        groupByFilters = groupFilterMatch[1];
+        groupByExp = groupByExp.replace(groupByFilters, '').trim();
+      } 
+      var parsedGroupingExp = $parse(groupByExp);
+      // Creates a getter function that can run against an arbitary item 
+      getGroupingFn = function($scope) {
+        return function(item) {
+          var locals = {};
+          locals[itemName] = item;
+          return parsedGroupingExp($scope, locals);
+        };      
+      };
+    }
+    
     return {
-      itemName: match[4] || match[2], // (lhs) Left-hand side,
+      itemName: itemName, // (lhs) Left-hand side,
       keyName: match[3], //for (key, value) syntax
       source: $parse(source),
       filters: filters,
       trackByExp: match[6],
+      groupByExp: groupByExp,
+      groupByFilter: groupByFilters,
+      getGroupingFn: getGroupingFn,      
       modelMapper: $parse(match[1] || match[4] || match[2]),
       repeatExpression: function (grouped) {
         var expression = this.itemName + ' in ' + (grouped ? '$group.items' : '$select.items');
@@ -75,9 +104,4 @@ uis.service('uisRepeatParser', ['uiSelectMinErr','$parse', function(uiSelectMinE
     };
 
   };
-
-  self.getGroupNgRepeatExpression = function() {
-    return '$group in $select.groups';
-  };
-
 }]);
