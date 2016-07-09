@@ -97,6 +97,10 @@ describe('ui-select tests', function() {
       });
     };
 
+    scope.simple = {
+      colors: ['Red', 'Green', 'Blue', 'Yellow', 'Magenta', 'Maroon', 'Umbra', 'Turquoise'],
+      selected: ['Red']
+    };    
 
     scope.people = [
       { name: 'Adam',      email: 'adam@email.com',      group: 'Foo', age: 12 },
@@ -620,7 +624,7 @@ describe('ui-select tests', function() {
 
     expect($(el).scope().$select.selected).not.toBeDefined();
   });
-
+  
   it('should allow tagging if the attribute says so', function() {
     var el = createUiSelect({tagging: true});
     clickMatch(el);
@@ -1400,6 +1404,43 @@ describe('ui-select tests', function() {
     triggerKeydown(searchInput, Key.Enter);
 
     expect($(el).scope().$select.selected).toEqual('idontexist');
+  });
+
+  it('should allow tagging with simple string and no label if attribute says so', function () {
+
+    var el = compileTemplate(
+      '<ui-select multiple tagging tagging-label="false" ng-model="simple.selected"> \
+        <ui-select-match placeholder="Pick one...">{{$select.selected}}</ui-select-match> \
+        <ui-select-choices repeat="color in simple.color | filter: $select.search"> \
+          <div ng-bind-html="color | highlight: $select.search"></div> \
+        </ui-select-choices> \
+      </ui-select>'
+    );
+
+    clickMatch(el);
+
+    $(el).scope().$select.select("I don't exist");
+
+    expect($(el).scope().$select.selected).toEqual(["Red", "I don't exist"]);
+    expect(scope.simple.selected).toEqual(['Red', "I don't exist"])
+  });
+
+  it('should not prevent selecting the first item when tagging with simple string and no label', function () {
+
+    var el = compileTemplate(
+      '<ui-select multiple tagging tagging-label="false" ng-model="simple.selected"> \
+        <ui-select-match placeholder="Pick one...">{{$item}}</ui-select-match> \
+        <ui-select-choices repeat="color in simple.colors | filter: $select.search"> \
+          <div ng-bind-html="color | highlight: $select.search"></div> \
+        </ui-select-choices> \
+      </ui-select>'
+    );
+
+    // ensure test source array has not changed
+    expect(scope.simple.colors[1]).toBe('Green');    
+    clickItem(el, 'Green');
+        
+    expect(scope.simple.selected).toEqual(['Red', 'Green']);
   });
 
   it('should allow creating tag on ENTER in multiple select mode with tagging enabled, no labels', function() {

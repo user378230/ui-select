@@ -369,73 +369,88 @@ uis.controller('uiSelectCtrl',
 
 
   // When the user selects an item with ENTER or clicks the dropdown
-  ctrl.select = function(item, skipFocusser, $event) {
-    if (item === undefined || !_isItemDisabled(item)) {
+  ctrl.select = function (item, skipFocusser, $event) {
 
-      if ( ! ctrl.items && ! ctrl.search && ! ctrl.tagging.isActivated) return;
+    if (angular.isDefined(item) && _isItemDisabled(item)) return;
 
-      if (!item || !_isItemDisabled(item)) {
-        if(ctrl.tagging.isActivated) {
-          // if taggingLabel is disabled and item is undefined we pull from ctrl.search
-          if ( ctrl.taggingLabel === false ) {
-            if ( ctrl.activeIndex < 0 ) {
-              if (item === undefined) {
-                item = ctrl.tagging.fct !== undefined ? ctrl.tagging.fct(ctrl.search) : ctrl.search;
-              }
-              if (!item || angular.equals( ctrl.items[0], item ) ) {
-                return;
-              }
-            } else {
-              // keyboard nav happened first, user selected from dropdown
-              item = ctrl.items[ctrl.activeIndex];
-            }
-          } else {
-            // tagging always operates at index zero, taggingLabel === false pushes
-            // the ctrl.search value without having it injected
-            if ( ctrl.activeIndex === 0 ) {
-              // ctrl.tagging pushes items to ctrl.items, so we only have empty val
-              // for `item` if it is a detected duplicate
-              if ( item === undefined ) return;
+    if (!ctrl.items && !ctrl.search && !ctrl.tagging.isActivated) return;
 
-              // create new item on the fly if we don't already have one;
-              // use tagging function if we have one
-              if ( ctrl.tagging.fct !== undefined && typeof item === 'string' ) {
-                item = ctrl.tagging.fct(item);
-                if (!item) return;
-              // if item type is 'string', apply the tagging label
-              } else if ( typeof item === 'string' ) {
-                // trim the trailing space
-                item = item.replace(ctrl.taggingLabel,'').trim();
-              }
-            }
-          }
-          // search ctrl.selected for dupes potentially caused by tagging and return early if found
-          if (_isItemSelected(item)) {
-            ctrl.close(skipFocusser);
-            return;
-          }
+    var dummyTaggingFunc = function(i) { return i; };
+    var taggingFunc = angular.isDefined(ctrl.tagging.fct) ? ctrl.tagging.fct
+        : dummyTaggingFunc;
+        
+    var minActiveIndex = ctrl.taggingLabel === false ? -1 : 0;
+    
+    // The ctrl.activeIndex might not be set (eg. if the user has clicked on an entry)
+    // check to see if the item exists, if so use its index as the active index
+    var itemIndex = minActiveIndex;
+    if(ctrl.activeIndex === minActiveIndex) {
+      var idx = ctrl.items.indexOf(item);
+      if(idx > -1) {
+        itemIndex = idx;
+      }      
+    }
+    
+    if(ctrl.tagging.isActivated && itemIndex === minActiveIndex) {
+      
+        if(ctrl.taggingLabel !== false) {
+          // If item is undefined it'll remain undefined 
+          // and be ignore later          
+          item = _getCleanedTag(item);
+        } else {
+          if(angular.isUndefined(item)) {
+            item = taggingFunc(ctrl.search);
+          }          
         }
-
-        $scope.$broadcast('uis:select', item);
-
-        var locals = {};
-        locals[ctrl.parserResult.itemName] = item;
-
-        $timeout(function(){
-          ctrl.onSelectCallback($scope, {
-            $item: item,
-            $model: ctrl.parserResult.modelMapper($scope, locals)
-          });
-        });
-
-        if (ctrl.closeOnSelect) {
-          ctrl.close(skipFocusser);
-        }
-        if ($event && $event.type === 'click') {
-          ctrl.clickTriggeredSelect = true;
+        
+        // tagging function aborted selection
+        // or tagged item was a duplicate
+        if(!item) return;
+    }
+    
+    // search ctrl.selected for dupes potentially caused by tagging and return early if found
+    if (_isItemSelected(item)) {
+      ctrl.close(skipFocusser);
+      return;
+    }
+    
+    function _getCleanedTag(tagItem) {
+      
+      if(angular.isString(tagItem)) {
+        if(taggingFunc === dummyTaggingFunc) {
+          // if there isn't a tagging function ensure tagging 
+          // label is removed from value
+          tagItem = tagItem.replace(ctrl.taggingLabel, '').trim();
+        } else {
+          tagItem = ctrl.tagging.fct(tagItem);           
         }
       }
+      
+      return tagItem;
     }
+    
+    // if we don't have an item by now something has gone wrong
+    if (!item) return;
+
+    $scope.$broadcast('uis:select', item);
+
+    var locals = {};
+    locals[ctrl.parserResult.itemName] = item;
+
+    $timeout(function(){
+      ctrl.onSelectCallback($scope, {
+        $item: item,
+        $model: ctrl.parserResult.modelMapper($scope, locals)
+      });
+    });
+
+    if (ctrl.closeOnSelect) {
+      ctrl.close(skipFocusser);
+    }
+    if ($event && $event.type === 'click') {
+      ctrl.clickTriggeredSelect = true;
+    }
+        
   };
 
   // Closes the dropdown
@@ -451,14 +466,6 @@ uis.controller('uiSelectCtrl',
 
   ctrl.setFocus = function(){
     if (!ctrl.focus) ctrl.focusInput[0].focus();
-  };
-
-  ctrl.clear = function($event) {
-    ctrl.select(undefined);
-    $event.stopPropagation();
-    $timeout(function() {
-      ctrl.focusser[0].focus();
-    }, 0, false);
   };
 
   // Toggle dropdown
