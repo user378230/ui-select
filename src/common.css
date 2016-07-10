@@ -112,13 +112,14 @@ body > .select2-container.open {
     margin-top: -2px; /* FIXME hardcoded value :-/ */
 }
 
-.ui-select-container[theme="selectize"] .ui-select-search-hidden{
+.ui-select-container[theme="selectize"] input.ui-select-search-hidden{
     opacity: 0;
     height: 0;
     min-height: 0;
     padding: 0;
     margin: 0;
     border:0;
+    width: 0;
 }
 
 /* Bootstrap theme */
