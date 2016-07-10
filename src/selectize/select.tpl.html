@@ -8,8 +8,8 @@
            ng-click="$select.toggle($event)"
            placeholder="{{$select.placeholder}}"
            ng-model="$select.search"
-           ng-hide="!$select.searchEnabled || (!$select.isEmpty() && !$select.open)"
-           ng-disabled="$select.disabled"
+           ng-hide="(!$select.isEmpty() && !$select.open)"
+           ng-disabled="!$select.searchEnabled || $select.disabled"
            aria-label="{{ $select.baseTitle }}">
   </div>
   <div class="ui-select-choices"></div>
