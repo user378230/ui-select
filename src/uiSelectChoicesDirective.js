@@ -50,8 +50,8 @@ uis.directive('uiSelectChoices',
       // If IE8 then need to target rowsInner to apply the ng-click attr as choices will not capture the event. 
       var clickTarget = $window.document.addEventListener ? choices : rowsInner;
       clickTarget.attr('ng-click', '$select.select(' + parserResult.itemName + ',$select.skipFocusser,$event)');
-      
-      return function link(scope, element, attrs, $select) {
+      console.log("compiled");
+      return function link(scope, element, attrs, $select, $transcludeFn) {
 
        
         $select.parseRepeatAttr(attrs.repeat, groupByExp, groupFilterExp); //Result ready at $select.parserResult
@@ -74,7 +74,24 @@ uis.directive('uiSelectChoices',
             $select.items = [];
           }
         });
+        
+        var transcluded = $select.transcluded();
+        
 
+        
+        var transcludedHeader = transcluded.querySelectorAll('.ui-select-header');
+        var transcludedFooter = transcluded.querySelectorAll('.ui-select-footer');
+    
+        if((transcludedHeader && transcludedHeader.length)) {
+          transcludedHeader.removeAttr('ng-transclude'); // Content has already been transcluded
+          element.prepend(transcludedHeader);
+        }
+        
+        if(transcludedFooter && transcludedFooter.length){
+          transcludedFooter.removeAttr('ng-transclude');
+          element.append(transcludedFooter);
+        }
+        
         attrs.$observe('refreshDelay', function() {
           // $eval() is needed otherwise we get a string instead of a number
           var refreshDelay = scope.$eval(attrs.refreshDelay);

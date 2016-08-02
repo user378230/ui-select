@@ -205,6 +205,9 @@ uis.directive('uiSelect',
           // instead of creating a hackish DOM element:
           var transcluded = angular.element('<div>').append(clone);
 
+          $select.transcluded = function() {
+            return transcluded;
+          };
           var transcludedMatch = transcluded.querySelectorAll('.ui-select-match');
           transcludedMatch.removeAttr('ui-select-match'); //To avoid loop in case directive as attr
           transcludedMatch.removeAttr('data-ui-select-match'); // Properly handle HTML5 data-attributes
@@ -213,47 +216,21 @@ uis.directive('uiSelect',
           }
           element.querySelectorAll('.ui-select-match').replaceWith(transcludedMatch);
 
-          var transcludedChoices = transcluded.querySelectorAll('.ui-select-choices');
-          transcludedChoices.removeAttr('ui-select-choices'); //To avoid loop in case directive as attr
-          transcludedChoices.removeAttr('data-ui-select-choices'); // Properly handle HTML5 data-attributes
-          if (transcludedChoices.length !== 1) {
-            throw uiSelectMinErr('transcluded', "Expected 1 .ui-select-choices but got '{0}'.", transcludedChoices.length);
-          }
-          element.querySelectorAll('.ui-select-choices').replaceWith(transcludedChoices);
-
+          console.log('bla');
           var transcludedNoChoice = transcluded.querySelectorAll('.ui-select-no-choice');
           transcludedNoChoice.removeAttr('ui-select-no-choice'); //To avoid loop in case directive as attr
           transcludedNoChoice.removeAttr('data-ui-select-no-choice'); // Properly handle HTML5 data-attributes
           if (transcludedNoChoice.length == 1) {
             element.querySelectorAll('.ui-select-no-choice').replaceWith(transcludedNoChoice);
           }
-
-          var transcludedHeader = transcluded.querySelectorAll('.ui-select-header');
-          var transcludedFooter = transcluded.querySelectorAll('.ui-select-footer');
-          if((transcludedHeader && transcludedHeader.length) || (transcludedFooter && transcludedFooter.length)){
-            $timeout(function(){
-              var selectChoices = element.querySelectorAll('.ui-select-choices');
-              
-              if(transcludedHeader && transcludedHeader.length){
-                transcludedHeader.removeAttr('ui-select-header'); // To avoid loop in case directive as attr
-                transcludedHeader.removeAttr('ng-transclude'); // Content has already been transcluded
-                transcludedHeader.removeAttr('data-ui-select-header'); // Properly handle HTML5 data-attributes
-                transcludedHeader.removeAttr('data-ng-transclude');
-                selectChoices.prepend(transcludedHeader);
-              }
-              
-              if(transcludedFooter && transcludedFooter.length){
-                transcludedFooter.removeAttr('ui-select-footer'); // To avoid loop in case directive as attr
-                transcludedFooter.removeAttr('ng-transclude'); // Content has already been transcluded
-                transcludedFooter.removeAttr('data-ui-select-footer'); // Properly handle HTML5 data-attributes
-                transcludedFooter.removeAttr('data-ng-transclude');
-                selectChoices.append(transcludedFooter);
-              }
-              
-              // re-compile selectChoices in case header or footer requires one of ui-select-choice's directives
-              $compile(selectChoices)(scope);
-            });
-          }
+          
+          var transcludedChoices = transcluded.querySelectorAll('.ui-select-choices');
+          transcludedChoices.removeAttr('ui-select-choices'); //To avoid loop in case directive as attr
+          transcludedChoices.removeAttr('data-ui-select-choices'); // Properly handle HTML5 data-attributes
+          if (transcludedChoices.length !== 1) {
+            throw uiSelectMinErr('transcluded', "Expected 1 .ui-select-choices but got '{0}'.", transcludedChoices.length);
+          }          
+          element.querySelectorAll('.ui-select-choices').replaceWith(transcludedChoices);
         });
 
         // Support for appending the select field to the body when its open
