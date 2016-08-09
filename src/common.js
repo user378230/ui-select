@@ -179,4 +179,48 @@ var uis = angular.module('ui.select', [])
   })();
 
   return templateRequest;
-}]);
+}])
+  // .factory('uisAsyncCompilerFactory',
+  //   ['uisTemplateRequest', '$templateCache', 
+  //   function(uisTemplateRequest, $templateCache) {
+      
+  //     return {createFn: asyncCompilationFactory};
+      
+  //     function asyncCompilationFactory(templateUrl, preCompileFn, templateConfigurationFn, postLinkFn) {
+  //       preCompileFn();
+
+  //       if(angular.isDefined($templateCache.get(templateUrl))) {
+  //         // modify template and return normal link function
+  //         var templateElement = angular.element($templateCache.get(templateUrl));
+          
+  //         templateConfigurationFn(templateElement);
+          
+  //         tElement.append(templateElement);
+
+  //         return postLinkFn;
+  //       } else {
+  //         // return link function that requests template and modifies result
+  //         return function asyncPostLink(scope, element, attrs, $select) {
+  //           uisTemplateRequest(templateUrl).then(function(template) {
+  //             var templateElement = angular.element(template);
+
+  //             templateConfigurationFn(templateElement);
+              
+  //             $compile(templateElement)(scope);
+
+  //             element.append(templateElement);
+
+  //             postLink(scope, element, attrs, $select);
+  //           });
+  //         };
+  //       }
+
+
+  //     }
+
+      
+  //   }]
+  // )
+  ;
+
+

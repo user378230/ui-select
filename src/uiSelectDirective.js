@@ -1,6 +1,6 @@
 uis.directive('uiSelect',
-  ['$document', 'uiSelectConfig', 'uiSelectMinErr', 'uisOffset', '$compile', '$parse', '$timeout', 'uisTemplateRequest',
-  function($document, uiSelectConfig, uiSelectMinErr, uisOffset, $compile, $parse, $timeout, uisTemplateRequest) {
+  ['$document', 'uiSelectConfig', 'uiSelectMinErr', 'uisOffset', '$compile', '$parse', '$timeout', '$templateCache', 'uisTemplateRequest',
+  function($document, uiSelectConfig, uiSelectMinErr, uisOffset, $compile, $parse, $timeout, $templateCache, uisTemplateRequest) {
 
   return {
     restrict: 'EA',
@@ -17,10 +17,58 @@ uis.directive('uiSelect',
     controllerAs: '$select',
     compile: function(tElement, tAttrs) {
       
+      var theme = tAttrs.theme || uiSelectConfig.theme;
+      var templateUrl = theme + (angular.isDefined(tAttrs.multiple) ? '/select-multiple.tpl.html' : '/select.tpl.html');
+        
       // Empty everything and save for use later
       var originalContent = angular.element('<div>').append(tElement.contents());
       tElement.empty();
       
+      if(angular.isDefined($templateCache.get(templateUrl))) {
+        // modify template and return normal link function
+        var templateElement = angular.element($templateCache.get(templateUrl));
+        
+        configureTemplate(templateElement, originalContent);
+        
+        tElement.append(templateElement);
+
+        return postLink;
+      } else {
+        // return link function that requests template and modifies result
+        return asyncPostLink;
+      }
+
+      function configureTemplate(templateElement, newContents) {
+        if (angular.isDefined(tAttrs.multiple)) {
+          templateElement.append('<ui-select-multiple/>').removeAttr('multiple');
+        } else {
+          templateElement.append('<ui-select-single/>');
+        }
+
+        // perform checks for matchElem/choicesElem and data-attrs..
+        var matchElem = newContents.querySelectorAll('ui-select-match');
+        matchElem.attr('theme', theme);
+        templateElement.querySelectorAll('.ui-select-match').replaceWith(matchElem);
+
+        var choicesElem = newContents.querySelectorAll('ui-select-choices');
+        choicesElem.attr('theme', theme);
+        templateElement.querySelectorAll('.ui-select-choices').replaceWith(choicesElem);
+      }
+
+      function asyncPostLink(scope, element, attrs, ctrls, transcludeFn) {
+
+        uisTemplateRequest(templateUrl).then(function(template) {
+          
+          var templateElement = angular.element(template);          
+          configureTemplate(templateElement, originalContent);          
+          $compile(templateElement)(scope);
+
+          element.append(templateElement);
+
+          postLink(scope, element, attrs, $select);
+
+        });
+      }
       // Allow setting ngClass on uiSelect
       // var match = /{(.*)}\s*{(.*)}/.exec(tAttrs.ngClass);
       // if(match) {
@@ -35,27 +83,7 @@ uis.directive('uiSelect',
       // if (tAttrs.inputId)
       //   tElement.querySelectorAll('input.ui-select-search')[0].id = tAttrs.inputId;
 
-      return function(scope, element, attrs, ctrls, transcludeFn) {
-        var theme = tAttrs.theme || uiSelectConfig.theme;
-        var templateUrl = theme + (angular.isDefined(tAttrs.multiple) ? '/select-multiple.tpl.html' : '/select.tpl.html');
-        
-        uisTemplateRequest(templateUrl).then(function(response) {
-          
-          var templateElement = angular.element(response);
-          if (angular.isDefined(tAttrs.multiple)) {
-            templateElement.append('<ui-select-multiple/>').removeAttr('multiple');
-          } else {
-            templateElement.append('<ui-select-single/>');
-          }
-          console.log(originalContent);
-          var choicesElem = originalContent.querySelectorAll('ui-select-choices');
-          templateElement.querySelectorAll('.ui-select-choices').replaceWith(choicesElem);
-          
-          element.append(templateElement);
-          var compiled = $compile(templateElement)(scope);
-        });
-       
-        
+      function postLink(scope, element, attrs, ctrls, transcludeFn) {        
         var $select = ctrls[0];
         var ngModel = ctrls[1];
 
@@ -64,6 +92,8 @@ uis.directive('uiSelect',
         $select.focusserTitle = $select.baseTitle + ' focus';
         $select.focusserId = 'focusser-' + $select.generatedId;
 
+        $select.searchInput = element.querySelectorAll('input.ui-select-search');
+        $select.container = element.parent();
         $select.closeOnSelect = function() {
           if (angular.isDefined(attrs.closeOnSelect)) {
             return $parse(attrs.closeOnSelect)();
@@ -425,7 +455,7 @@ uis.directive('uiSelect',
             element.removeClass(directionUpClassName);
           }
         };
-      };
+      }
     }
   };
 }]);

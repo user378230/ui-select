@@ -10,7 +10,6 @@ uis.directive('uiSelectChoices',
 
       if (!tAttrs.repeat) throw uiSelectMinErr('repeat', "Expected 'repeat' expression.");
 
-      var repeat = RepeatParser.parse(tAttrs.repeat);
       var groupByExp = tAttrs.groupBy;
       var groupFilterExp = tAttrs.groupFilter;
       var parserResult = RepeatParser.parse(tAttrs.repeat);
@@ -19,40 +18,38 @@ uis.directive('uiSelectChoices',
       // Avoid compiling contents as its actually the ng-repeat content      
       tElement.empty();
 
-      var theme = tElement.parent().attr('theme') || uiSelectConfig.theme;
+      var theme = tAttrs.theme;
       var templateUrl = theme + '/choices.tpl.html';
       
       if(angular.isDefined($templateCache.get(templateUrl))) {
         // modify template and return normal link function
         var templateElement = angular.element($templateCache.get(templateUrl));
-        modifyBaseElement(templateElement, originalContent);
+        
+        configureTemplate(templateElement, originalContent);
+        
         tElement.append(templateElement);
 
-        return commonPostLink;
+        return postLink;
       } else {
         // return link function that requests template and modifies result
         return asyncPostLink;
-      }
-
-      function syncPostLink(scope, element, attrs, $select) {
-        modifyBaseElement(element, originalContent);
-        
-        commonPostLink(scope, element, attrs, $select);
       }
 
       function asyncPostLink(scope, element, attrs, $select) {
         uisTemplateRequest(templateUrl).then(function(template) {
           var templateElement = angular.element(template);
 
-          modifyBaseElement(templateElement, originalContent);
+          configureTemplate(templateElement, originalContent);
           
-          commonPostLink(scope, element, attrs, $select);
-
           $compile(templateElement)(scope);
+
+          element.append(templateElement);
+
+          postLink(scope, element, attrs, $select);
         });
       }
 
-      function modifyBaseElement(element, newContents) {   
+      function configureTemplate(element, newContents) {   
 
         if (groupByExp) {
           var groups = element.querySelectorAll('.ui-select-choices-group');
@@ -79,7 +76,7 @@ uis.directive('uiSelectChoices',
         clickTarget.attr('ng-click', '$select.select(' + parserResult.itemName + ',$select.skipFocusser,$event)');
       }
 
-      function commonPostLink(scope, element, attrs, $select) {
+      function postLink(scope, element, attrs, $select) {
 
         $select.parseRepeatAttr(attrs.repeat, groupByExp, groupFilterExp); //Result ready at $select.parserResult
 
