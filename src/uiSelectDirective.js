@@ -1,41 +1,84 @@
 uis.directive('uiSelect',
-  ['$document', 'uiSelectConfig', 'uiSelectMinErr', 'uisOffset', '$compile', '$parse', '$timeout',
-  function($document, uiSelectConfig, uiSelectMinErr, uisOffset, $compile, $parse, $timeout) {
+  ['$document', 'uiSelectConfig', 'uiSelectMinErr', 'uisOffset', '$compile', '$parse', '$timeout', '$templateCache', 'uisTemplateRequest',
+  function($document, uiSelectConfig, uiSelectMinErr, uisOffset, $compile, $parse, $timeout, $templateCache, uisTemplateRequest) {
 
   return {
     restrict: 'EA',
-    templateUrl: function(tElement, tAttrs) {
-      var theme = tAttrs.theme || uiSelectConfig.theme;
-      return theme + (angular.isDefined(tAttrs.multiple) ? '/select-multiple.tpl.html' : '/select.tpl.html');
-    },
     replace: true,
-    transclude: true,
     require: ['uiSelect', '^ngModel'],
     scope: true,
-
     controller: 'uiSelectCtrl',
     controllerAs: '$select',
     compile: function(tElement, tAttrs) {
+      
+      var theme = tAttrs.theme || uiSelectConfig.theme;
+      var templateUrl = theme + (angular.isDefined(tAttrs.multiple) ? '/select-multiple.tpl.html' : '/select.tpl.html');
+        
+      // Empty everything and save for use later
+      var originalContent = angular.element('<div>').append(tElement.contents());
+      tElement.empty();
+      
+      if(angular.isDefined($templateCache.get(templateUrl))) {
+        // modify template and return normal link function
+        var templateElement = angular.element($templateCache.get(templateUrl));
+        
+        configureTemplate(templateElement, originalContent);
+        
+        tElement.append(templateElement);
 
-      // Allow setting ngClass on uiSelect
-      var match = /{(.*)}\s*{(.*)}/.exec(tAttrs.ngClass);
-      if(match) {
-        var combined = '{'+ match[1] +', '+ match[2] +'}';
-        tAttrs.ngClass = combined;
-        tElement.attr('ng-class', combined);
+        return postLink;
+      } else {
+        // return link function that requests template and modifies result
+        return asyncPostLink;
       }
 
+      function configureTemplate(templateElement, newContents) {
+        if (angular.isDefined(tAttrs.multiple)) {
+          templateElement.append('<ui-select-multiple/>').removeAttr('multiple');
+        } else {
+          templateElement.append('<ui-select-single/>');
+        }
+
+        // perform checks for matchElem/choicesElem and data-attrs..
+        var matchElem = newContents.querySelectorAll('ui-select-match');
+        if(matchElem.length !== 1) {
+          throw uiSelectMinErr('uiSelectMatch', "Expected 1 ui-select-match but got '{0}'.", matchElem.length);
+        }
+        matchElem.attr('theme', theme);
+        if(angular.isDefined(tAttrs.multiple)) matchElem.attr('multiple', 'true');
+        templateElement.querySelectorAll('.ui-select-match').replaceWith(matchElem);
+
+        var choicesElem = newContents.querySelectorAll('ui-select-choices');
+        if(choicesElem.length !== 1) {
+          throw uiSelectMinErr('uiSelectChoices', "Expected 1 ui-select-choices but got '{0}'.", choicesElem.length);
+        }
+        choicesElem.attr('theme', theme);
+        templateElement.querySelectorAll('.ui-select-choices').replaceWith(choicesElem);
+
+      }
+
+      function asyncPostLink(scope, element, attrs, ctrls, transcludeFn) {
+
+        uisTemplateRequest(templateUrl).then(function(template) {
+          
+          var templateElement = angular.element(template);          
+          configureTemplate(templateElement, originalContent);          
+          $compile(templateElement)(scope);
+
+          element.append(templateElement);
+
+          postLink(scope, element, attrs, $select);
+
+        });
+      }
+     
       //Multiple or Single depending if multiple attribute presence
-      if (angular.isDefined(tAttrs.multiple))
-        tElement.append('<ui-select-multiple/>').removeAttr('multiple');
-      else
-        tElement.append('<ui-select-single/>');
+      
 
-      if (tAttrs.inputId)
-        tElement.querySelectorAll('input.ui-select-search')[0].id = tAttrs.inputId;
+      // if (tAttrs.inputId)
+      //   tElement.querySelectorAll('input.ui-select-search')[0].id = tAttrs.inputId;
 
-      return function(scope, element, attrs, ctrls, transcludeFn) {
-
+      function postLink(scope, element, attrs, ctrls, transcludeFn) {        
         var $select = ctrls[0];
         var ngModel = ctrls[1];
 
@@ -43,6 +86,13 @@ uis.directive('uiSelect',
         $select.baseTitle = attrs.title || 'Select box';
         $select.focusserTitle = $select.baseTitle + ' focus';
         $select.focusserId = 'focusser-' + $select.generatedId;
+
+        $select.searchInput = element.querySelectorAll('input.ui-select-search');
+        $select.container = element.querySelectorAll('.ui-select-container');
+
+        if(tAttrs.inputId) {
+          $select.searchInput[0].id = tAttrs.inputId;
+        }
 
         $select.closeOnSelect = function() {
           if (angular.isDefined(attrs.closeOnSelect)) {
@@ -69,8 +119,22 @@ uis.directive('uiSelect',
 
         if(attrs.tabindex){
           attrs.$observe('tabindex', function(value) {
-            $select.focusInput.attr('tabindex', value);
-            element.removeAttr('tabindex');
+            if(!$select.focusInput) {
+              var focusInputWatch = scope.$watch(
+                function() { return $select.focusInput; }, 
+                function(focusInput) {
+                  if(focusInput) {
+                    copyTabIndex();
+                    focusInputWatch();
+                  }
+              });
+            } else {
+              copyTabIndex();
+            }
+            function copyTabIndex() {
+              $select.focusInput.attr('tabindex', value);
+              element.removeAttr('tabindex');
+            }
           });
         }
 
@@ -196,38 +260,40 @@ uis.directive('uiSelect',
           $document.off('click', onDocumentClick);
         });
 
+        $select.transcluded = function() {return {}; };
         // Move transcluded elements to their correct position in main template
-        transcludeFn(scope, function(clone) {
-          // See Transclude in AngularJS http://blog.omkarpatil.com/2012/11/transclude-in-angularjs.html
 
-          // One day jqLite will be replaced by jQuery and we will be able to write:
-          // var transcludedElement = clone.filter('.my-class')
-          // instead of creating a hackish DOM element:
-          var transcluded = angular.element('<div>').append(clone);
+        // transcludeFn(scope, function(clone) {
+        //   // See Transclude in AngularJS http://blog.omkarpatil.com/2012/11/transclude-in-angularjs.html
 
-          var transcludedMatch = transcluded.querySelectorAll('.ui-select-match');
-          transcludedMatch.removeAttr('ui-select-match'); //To avoid loop in case directive as attr
-          transcludedMatch.removeAttr('data-ui-select-match'); // Properly handle HTML5 data-attributes
-          if (transcludedMatch.length !== 1) {
-            throw uiSelectMinErr('transcluded', "Expected 1 .ui-select-match but got '{0}'.", transcludedMatch.length);
-          }
-          element.querySelectorAll('.ui-select-match').replaceWith(transcludedMatch);
+        //   // One day jqLite will be replaced by jQuery and we will be able to write:
+        //   // var transcludedElement = clone.filter('.my-class')
+        //   // instead of creating a hackish DOM element:
+        //   var transcluded = angular.element('<div>').append(clone);
 
-          var transcludedChoices = transcluded.querySelectorAll('.ui-select-choices');
-          transcludedChoices.removeAttr('ui-select-choices'); //To avoid loop in case directive as attr
-          transcludedChoices.removeAttr('data-ui-select-choices'); // Properly handle HTML5 data-attributes
-          if (transcludedChoices.length !== 1) {
-            throw uiSelectMinErr('transcluded', "Expected 1 .ui-select-choices but got '{0}'.", transcludedChoices.length);
-          }
-          element.querySelectorAll('.ui-select-choices').replaceWith(transcludedChoices);
+        //   var transcludedMatch = transcluded.querySelectorAll('.ui-select-match');
+        //   transcludedMatch.removeAttr('ui-select-match'); //To avoid loop in case directive as attr
+        //   transcludedMatch.removeAttr('data-ui-select-match'); // Properly handle HTML5 data-attributes
+        //   if (transcludedMatch.length !== 1) {
+        //     throw uiSelectMinErr('transcluded', "Expected 1 .ui-select-match but got '{0}'.", transcludedMatch.length);
+        //   }
+        //   element.querySelectorAll('.ui-select-match').replaceWith(transcludedMatch);
 
-          var transcludedNoChoice = transcluded.querySelectorAll('.ui-select-no-choice');
-          transcludedNoChoice.removeAttr('ui-select-no-choice'); //To avoid loop in case directive as attr
-          transcludedNoChoice.removeAttr('data-ui-select-no-choice'); // Properly handle HTML5 data-attributes
-          if (transcludedNoChoice.length == 1) {
-            element.querySelectorAll('.ui-select-no-choice').replaceWith(transcludedNoChoice);
-          }
-        });
+        //   var transcludedChoices = transcluded.querySelectorAll('.ui-select-choices');
+        //   transcludedChoices.removeAttr('ui-select-choices'); //To avoid loop in case directive as attr
+        //   transcludedChoices.removeAttr('data-ui-select-choices'); // Properly handle HTML5 data-attributes
+        //   if (transcludedChoices.length !== 1) {
+        //     throw uiSelectMinErr('transcluded', "Expected 1 .ui-select-choices but got '{0}'.", transcludedChoices.length);
+        //   }
+        //   element.querySelectorAll('.ui-select-choices').replaceWith(transcludedChoices);
+
+        //   var transcludedNoChoice = transcluded.querySelectorAll('.ui-select-no-choice');
+        //   transcludedNoChoice.removeAttr('ui-select-no-choice'); //To avoid loop in case directive as attr
+        //   transcludedNoChoice.removeAttr('data-ui-select-no-choice'); // Properly handle HTML5 data-attributes
+        //   if (transcludedNoChoice.length == 1) {
+        //     element.querySelectorAll('.ui-select-no-choice').replaceWith(transcludedNoChoice);
+        //   }
+        // });
 
         // Support for appending the select field to the body when its open
         var appendToBody = scope.$eval(attrs.appendToBody);
@@ -400,7 +466,7 @@ uis.directive('uiSelect',
             element.removeClass(directionUpClassName);
           }
         };
-      };
+      }
     }
   };
 }]);

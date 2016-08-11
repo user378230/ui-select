@@ -82,9 +82,6 @@ uis.directive('uiSelectMultiple', ['uiSelectMinErr','$timeout', function(uiSelec
 
       $select.multiple = true;
 
-      //Input that will handle focus
-      $select.focusInput = $select.searchInput;
-
       //Properly check for empty if set to multiple
       ngModel.$isEmpty = function(value) {
         return !value || value.length === 0;
@@ -190,7 +187,7 @@ uis.directive('uiSelectMultiple', ['uiSelectMinErr','$timeout', function(uiSelec
         if (oldValue && !newValue) $select.sizeSearchInput();
       });
 
-      $select.searchInput.on('keydown', function(e) {
+      function onKeyDown(e) {
         var key = e.which;
         scope.$apply(function() {
           var processed = false;
@@ -205,7 +202,8 @@ uis.directive('uiSelectMultiple', ['uiSelectMinErr','$timeout', function(uiSelec
             e.stopPropagation();
           }
         });
-      });
+      }
+
       function _getCaretPosition(el) {
         if(angular.isNumber(el.selectionStart)) return el.selectionStart;
         // selectionStart is not supported in IE8 and we don't want hacky workarounds so we compromise
@@ -276,7 +274,16 @@ uis.directive('uiSelectMultiple', ['uiSelectMinErr','$timeout', function(uiSelec
         return true;
       }
 
-      $select.searchInput.on('keyup', function(e) {
+      var searchInputWatch = scope.$watch(function() { return $select.searchInput; }, function(searchInput) {
+        if(searchInput) {
+          $select.searchInput.on('blur', onSearchInputBlur);
+          $select.searchInput.on('keyup', searchInputKeyUp);
+          $select.searchInput.on('keydown', onKeyDown);
+          searchInputWatch(); 
+          $select.focusInput = $select.searchInput;
+        }
+      });
+      function searchInputKeyUp(e) {
 
         if ( ! KEY.isVerticalMovement(e.which) ) {
           scope.$evalAsync( function () {
@@ -400,7 +407,8 @@ uis.directive('uiSelectMultiple', ['uiSelectMinErr','$timeout', function(uiSelec
             }
           });
         }
-      });
+      }
+
       function _findCaseInsensitiveDupe(arr) {
         if ( arr === undefined || $select.search === undefined ) {
           return false;
@@ -439,13 +447,12 @@ uis.directive('uiSelectMultiple', ['uiSelectMinErr','$timeout', function(uiSelec
         }
         return dupeIndex;
       }
-
-      $select.searchInput.on('blur', function() {
+      
+      function onSearchInputBlur() {
         $timeout(function() {
           $selectMultiple.activeMatchIndex = -1;
         });
-      });
-
+      }
     }
   };
 }]);

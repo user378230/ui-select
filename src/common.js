@@ -124,6 +124,7 @@ var uis = angular.module('ui.select', [])
   return {
     link: function (scope, element, attrs, ctrl, transclude) {
         transclude(scope, function (clone) {
+          console.log(clone);
           element.append(clone);
         });
       }
@@ -165,4 +166,62 @@ var uis = angular.module('ui.select', [])
       left: boundingClientRect.left + ($window.pageXOffset || $document[0].documentElement.scrollLeft)
     };
   };
-}]);
+}])
+.factory('uisTemplateRequest', ['$injector', function($injector) {
+  var templateRequest;
+  // $templateRequest service is only availiable angular v1.3+
+  templateRequest = (function () {
+    try {
+      return $injector.get('$templateRequest');
+    } catch (err) {
+      // replace with substitute service
+      return {};
+    }
+  })();
+
+  return templateRequest;
+}])
+  // .factory('uisAsyncCompilerFactory',
+  //   ['uisTemplateRequest', '$templateCache', 
+  //   function(uisTemplateRequest, $templateCache) {
+      
+  //     return {createFn: asyncCompilationFactory};
+      
+  //     function asyncCompilationFactory(templateUrl, preCompileFn, templateConfigurationFn, postLinkFn) {
+  //       preCompileFn();
+
+  //       if(angular.isDefined($templateCache.get(templateUrl))) {
+  //         // modify template and return normal link function
+  //         var templateElement = angular.element($templateCache.get(templateUrl));
+          
+  //         templateConfigurationFn(templateElement);
+          
+  //         tElement.append(templateElement);
+
+  //         return postLinkFn;
+  //       } else {
+  //         // return link function that requests template and modifies result
+  //         return function asyncPostLink(scope, element, attrs, $select) {
+  //           uisTemplateRequest(templateUrl).then(function(template) {
+  //             var templateElement = angular.element(template);
+
+  //             templateConfigurationFn(templateElement);
+              
+  //             $compile(templateElement)(scope);
+
+  //             element.append(templateElement);
+
+  //             postLink(scope, element, attrs, $select);
+  //           });
+  //         };
+  //       }
+
+
+  //     }
+
+      
+  //   }]
+  // )
+  ;
+
+

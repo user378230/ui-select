@@ -1,37 +1,73 @@
-uis.directive('uiSelectMatch', ['uiSelectConfig', function(uiSelectConfig) {
+uis.directive('uiSelectMatch', 
+['uiSelectConfig', '$templateCache', 'uisTemplateRequest', 
+  function(uiSelectConfig, $templateCache, uisTemplateRequest) {
+
   return {
     restrict: 'EA',
     require: '^uiSelect',
     replace: true,
-    transclude: true,
-    templateUrl: function(tElement) {
-      // Needed so the uiSelect can detect the transcluded content
-      tElement.addClass('ui-select-match');
+    compile: function(tElement, tAttrs) {
+      
+      // Get theme attribute from parent (ui-select)
+      var parent = tElement.parent().parent();
+      var theme = tAttrs.theme;
+      var multi = angular.isDefined(tAttrs.multiple);
+      
+      // Empty everything and save for use later
+      var originalContent = angular.element('<div>').append(tElement.contents());
+      tElement.empty();
 
-      var parent = tElement.parent();
-      // Gets theme attribute from parent (ui-select)
-      var theme = getAttribute(parent, 'theme') || uiSelectConfig.theme;
-      var multi = angular.isDefined(getAttribute(parent, 'multiple'));
+      var templateUrl = theme + (multi ? '/match-multiple.tpl.html' : '/match.tpl.html');
 
-      return theme + (multi ? '/match-multiple.tpl.html' : '/match.tpl.html');      
-    },
-    link: function(scope, element, attrs, $select) {
-      $select.lockChoiceExpression = attrs.uiLockChoice;
-      attrs.$observe('placeholder', function(placeholder) {
-        $select.placeholder = placeholder !== undefined ? placeholder : uiSelectConfig.placeholder;
-      });
+      if(angular.isDefined($templateCache.get(templateUrl))) {
+        // modify template and return normal link function
+        var templateElement = angular.element($templateCache.get(templateUrl));
+        
+        configureTemplate(templateElement, originalContent);
+        
+        tElement.append(templateElement);
 
-      function setAllowClear(allow) {
-        $select.allowClear = (angular.isDefined(allow)) ? (allow === '') ? true : (allow.toLowerCase() === 'true') : false;
+        return postLink;
+      } else {
+        // return link function that requests template and modifies result
+        return asyncPostLink;
+      }
+    
+      function configureTemplate(template, contents) {
+        template.querySelectorAll('.ui-select-match-append').append(contents.contents());
       }
 
-      attrs.$observe('allowClear', setAllowClear);
-      setAllowClear(attrs.allowClear);
+      function asyncPostLink(scope, element, attrs, $select) {
+        uisTemplateRequest(templateUrl).then(function(template) {
+          var templateElement = angular.element(template);
 
-      if($select.multiple){
-        $select.sizeSearchInput();
+          configureTemplate(templateElement, originalContent);
+          
+          $compile(templateElement)(scope);
+
+          element.append(templateElement);
+
+          postLink(scope, element, attrs, $select);
+        });
       }
 
+      function postLink(scope, element, attrs, $select) {
+        $select.lockChoiceExpression = attrs.uiLockChoice;
+        attrs.$observe('placeholder', function(placeholder) {
+          $select.placeholder = placeholder !== undefined ? placeholder : uiSelectConfig.placeholder;
+        });
+
+        function setAllowClear(allow) {
+          $select.allowClear = (angular.isDefined(allow)) ? (allow === '') ? true : (allow.toLowerCase() === 'true') : false;
+        }
+
+        attrs.$observe('allowClear', setAllowClear);
+        setAllowClear(attrs.allowClear);
+
+        if($select.multiple){
+          $select.sizeSearchInput();
+        }
+      }
     }
   };
 

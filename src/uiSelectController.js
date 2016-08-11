@@ -54,11 +54,6 @@ uis.controller('uiSelectCtrl',
     }
   })();
 
-  ctrl.searchInput = $element.querySelectorAll('input.ui-select-search');
-  if (ctrl.searchInput.length !== 1) {
-    throw uiSelectMinErr('searchInput', "Expected 1 input.ui-select-search but got '{0}'.", ctrl.searchInput.length);
-  }
-
   ctrl.isEmpty = function() {
     return angular.isUndefined(ctrl.selected) || ctrl.selected === null || ctrl.selected === '' || (ctrl.multiple && ctrl.selected.length === 0);
   };
@@ -531,7 +526,7 @@ uis.controller('uiSelectCtrl',
   ctrl.sizeSearchInput = function() {
 
     var input = ctrl.searchInput[0],
-        container = ctrl.searchInput.parent().parent()[0],
+        container = ctrl.container[0],
         calculateContainerWidth = function() {
           // Return the container width only if the search input is visible
           return container.clientWidth * !!input.offsetParent;
@@ -540,9 +535,9 @@ uis.controller('uiSelectCtrl',
           if (containerWidth === 0) {
             return false;
           }
-          var inputWidth = containerWidth - input.offsetLeft - 10;
+          var inputWidth = containerWidth - input.offsetLeft - 11;
           if (inputWidth < 50) inputWidth = containerWidth;
-          ctrl.searchInput.css('width', inputWidth+'px');
+          ctrl.searchInput.css('width', inputWidth + 'px');
           return true;
         };
 
@@ -595,8 +590,22 @@ uis.controller('uiSelectCtrl',
     return processed;
   }
 
-  // Bind to keyboard shortcuts
-  ctrl.searchInput.on('keydown', function(e) {
+  var searchInputWatch = $scope.$watch(function() { return ctrl.searchInput; }, function(searchInput) {
+    if(searchInput) {
+      attachHandlers();
+      searchInputWatch();
+      ctrl.sizeSearchInput();
+    }
+  });
+
+  function attachHandlers() {
+    // Bind to keyboard shortcuts
+    ctrl.searchInput.on('paste', onSearchInputPaste);
+    ctrl.searchInput.on('tagged', onSearchInputTagged);
+    ctrl.searchInput.on('keydown', onSearchInputKeyDown);
+  }
+  
+  function onSearchInputKeyDown(e) {
 
     var key = e.which;
 
@@ -652,9 +661,9 @@ uis.controller('uiSelectCtrl',
       e.stopPropagation();
     }
 
-  });
+  }
 
-  ctrl.searchInput.on('paste', function (e) {
+  function onSearchInputPaste(e) {
     var data;
 
     if (window.clipboardData && window.clipboardData.getData) { // IE
@@ -697,14 +706,14 @@ uis.controller('uiSelectCtrl',
         e.stopPropagation();
       }
     }
-  });
+  }
 
-  ctrl.searchInput.on('tagged', function() {
+  function onSearchInputTagged() {
     $timeout(function() {
       _resetSearchInput();
     });
-  });
-
+  }
+  
   // See https://github.com/ivaynberg/select2/blob/3.4.6/select2.js#L1431
   function _ensureHighlightVisible() {
     var container = $element.querySelectorAll('.ui-select-choices-content');

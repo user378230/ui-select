@@ -175,7 +175,7 @@ describe('ui-select tests', function() {
   }
 
   function getMatchLabel(el) {
-    return $(el).find('.ui-select-match > span:first > span[ng-transclude]:not(.ng-hide)').text();
+    return $(el).find('.ui-select-match .ui-select-match-append:not(.ng-hide)').text();
   }
 
   function clickItem(el, text) {
@@ -197,7 +197,7 @@ describe('ui-select tests', function() {
     // Does not work with jQuery 2.*, have to use jQuery 1.11.*
     // This will be fixed in AngularJS 1.3
     // See issue with unit-testing directive using karma https://github.com/angular/angular.js/issues/4640#issuecomment-35002427
-    return el.scope().$select.open && el.hasClass('open');
+    return el.scope().$select.open && el.find('.dropdown').hasClass('open');
   }
 
   function triggerKeydown(element, keyCode) {
@@ -421,14 +421,6 @@ describe('ui-select tests', function() {
     expect(getMatchLabel(el)).toEqual('Adam');
   });
 
-  it('should merge both ng-class attributes defined on ui-select and its templates', function() {
-    var el = createUiSelect({
-      ngClass: "{class: expression}"
-    });
-
-    expect($(el).attr('ng-class')).toEqual("{class: expression, open: $select.open}");
-  });
-
   it('should correctly render initial state with track by feature', function() {
     var el = compileTemplate(
       '<ui-select ng-model="selection.selected"> \
@@ -465,7 +457,7 @@ describe('ui-select tests', function() {
     var el = compileTemplate('<wrapper-ui-select ng-model="selection.selected"/>');
     scope.selection.selected =  { name: 'Samantha',  email: 'something different than array source',  group: 'bar', age: 30 };
     scope.$digest();
-    expect($(el).find('.ui-select-container > .ui-select-match > span:first > span[ng-transclude]:not(.ng-hide)').text()).toEqual('Samantha');
+    expect(getMatchLabel($(el).find('.ui-select-container'))).toEqual('Samantha');
   });
 
   it('should display the choices when activated', function() {
@@ -880,7 +872,7 @@ describe('ui-select tests', function() {
       });
 
       it('should allow the user to define the selected option', function () {
-        expect($(this.el).find('.ui-select-choices').attr('ui-disable-choice')).toBe('person.inactive');
+        expect($(this.el).find('ui-select-choices').attr('ui-disable-choice')).toBe('person.inactive');
       });
 
       it('should not allow disabled options to be selected', function() {
@@ -913,7 +905,7 @@ describe('ui-select tests', function() {
       });
 
       it('should allow the user to define the selected option', function () {
-        expect($(this.el).find('.ui-select-choices').attr('ui-disable-choice')).toBe('!person.active');
+        expect($(this.el).find('ui-select-choices').attr('ui-disable-choice')).toBe('!person.active');
       });
 
       it('should not allow disabled options to be selected', function() {
@@ -944,7 +936,7 @@ describe('ui-select tests', function() {
       });
 
       it('should allow the user to define the selected option', function () {
-        expect($(this.el).find('.ui-select-choices').attr('ui-disable-choice')).toBe("person.status == 'inactive'");
+        expect($(this.el).find('ui-select-choices').attr('ui-disable-choice')).toBe("person.status == 'inactive'");
       });
 
       it('should not allow disabled options to be selected', function() {
@@ -1089,7 +1081,7 @@ describe('ui-select tests', function() {
           <ui-select-match></ui-select-match> \
         </ui-select>'
       );
-    }).toThrow(new Error('[ui.select:transcluded] Expected 1 .ui-select-choices but got \'0\'.'));
+    }).toThrow(new Error('[ui.select:uiSelectChoices] Expected 1 ui-select-choices but got \'0\'.'));
   });
 
   it('should throw when no repeat attribute is provided to ui-select-choices', function() {
@@ -1121,7 +1113,7 @@ describe('ui-select tests', function() {
           <ui-select-choices repeat="item in items"></ui-select-choices> \
         </ui-select>'
       );
-    }).toThrow(new Error('[ui.select:transcluded] Expected 1 .ui-select-match but got \'0\'.'));
+    }).toThrow(new Error('[ui.select:uiSelectMatch] Expected 1 ui-select-match but got \'0\'.'));
   });
 
   it('should format the model correctly using alias', function() {
@@ -1827,7 +1819,7 @@ describe('ui-select tests', function() {
 
     it('should render initial state', function() {
         var el = createUiSelectMultiple();
-        expect(el).toHaveClass('ui-select-multiple');
+        expect(el.find(':first-child')).toHaveClass('ui-select-multiple');
         expect(el.scope().$select.selected.length).toBe(0);
         expect(el.find('.ui-select-match-item').length).toBe(0);
     });
@@ -1846,7 +1838,7 @@ describe('ui-select tests', function() {
         </ui-select>'
             );
 
-      expect(el).toHaveClass('ui-select-multiple');
+      expect(el.find(':first-child')).toHaveClass('ui-select-multiple');
       expect(el.scope().$select.selected.length).toBe(2);
       expect(el.find('.ui-select-match-item').length).toBe(2);
     });
@@ -1865,7 +1857,7 @@ describe('ui-select tests', function() {
         </ui-select>'
             );
 
-      expect(el).toHaveClass('ui-select-multiple');
+      expect(el.find(':first-child')).toHaveClass('ui-select-multiple');
       expect(el.scope().$select.selected.length).toBe(2);
       expect(el.find('.ui-select-match-item').length).toBe(2);
     });
@@ -2293,12 +2285,12 @@ describe('ui-select tests', function() {
       setSearchText(el, 'n');
       clickItem(el, 'Nicole');
 
-      expect(el.find('.ui-select-match-item [uis-transclude-append]:not(.ng-hide)').text())
+      expect(getMatchLabel(el))
         .toBe("Wladimir <wladimir@email.com>Samantha <samantha@email.com>Nicole <nicole@email.com>");
 
       setSearchText(el, 'o');
 
-      expect(el.find('.ui-select-match-item [uis-transclude-append]:not(.ng-hide)').text())
+      expect(getMatchLabel(el))
         .toBe("Wladimir <wladimir@email.com>Samantha <samantha@email.com>Nicole <nicole@email.com>");
 
     });
@@ -2320,12 +2312,12 @@ describe('ui-select tests', function() {
 
           var el2 = compileTemplate('<span class="resultDiv" ng-bind="selection.selectedMultiple"></span>');
 
-          expect(el.find('.ui-select-match-item [uis-transclude-append]:not(.ng-hide)').text())
+          expect(getMatchLabel(el))
               .toBe("Wladimir <wladimir@email.com>Samantha <samantha@email.com>");
 
           clickItem(el, 'Nicole');
 
-          expect(el.find('.ui-select-match-item [uis-transclude-append]:not(.ng-hide)').text())
+          expect(getMatchLabel(el))
               .toBe("Wladimir <wladimir@email.com>Samantha <samantha@email.com>Nicole <nicole@email.com>");
 
           expect(scope.selection.selectedMultiple.length).toBe(3);
@@ -2373,16 +2365,16 @@ describe('ui-select tests', function() {
 
           var el2 = compileTemplate('<span class="resultDiv" ng-bind="selection.selectedMultiple"></span>');
 
-          expect(el.find('.ui-select-match-item [uis-transclude-append]:not(.ng-hide)').text())
+          expect(getMatchLabel(el))
               .toBe("Wladimir <wladimir@email.com>");
 
           clickItem(el, 'Samantha');
-          expect(el.find('.ui-select-match-item [uis-transclude-append]:not(.ng-hide)').text())
+          expect(getMatchLabel(el))
               .toBe("Wladimir <wladimir@email.com>Samantha <samantha@email.com>");
 
           clickItem(el, 'Nicole');
 
-          expect(el.find('.ui-select-match-item [uis-transclude-append]:not(.ng-hide)').text())
+          expect(getMatchLabel(el))
               .toBe("Wladimir <wladimir@email.com>Samantha <samantha@email.com>");
 
           expect(scope.selection.selectedMultiple.length).toBe(2);
@@ -2477,7 +2469,7 @@ describe('ui-select tests', function() {
       scope.$digest();
       scope.$digest(); //2nd $digest needed when using angular 1.3.0-rc.1+, might be related with the fact that the value is an array
 
-      expect(el.find('.ui-select-match-item [uis-transclude-append]:not(.ng-hide)').text())
+      expect(getMatchLabel(el))
          .toBe("Wladimir <wladimir@email.com>Samantha <samantha@email.com>Nicole <nicole@email.com>");
 
     });
