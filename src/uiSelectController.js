@@ -520,6 +520,23 @@ uis.controller('uiSelectCtrl',
     };
   }
 
+  var initialized = false,
+      initializeCallbacks = [];
+
+  ctrl.initialized = function() {
+    initialized = true;
+    angular.forEach(initializeCallbacks, function(cb) {
+      cb(ctrl);
+    });
+  };
+
+  ctrl.onInit = function(initializeCallback) {
+    if(!initialized) {
+      initializeCallbacks.push(initializeCallback);
+    } else {
+      initializeCallback(ctrl);
+    }
+  };
 
   var sizeWatch = null;
   var updaterScheduled = false;
@@ -590,13 +607,8 @@ uis.controller('uiSelectCtrl',
     return processed;
   }
 
-  var searchInputWatch = $scope.$watch(function() { return ctrl.searchInput; }, function(searchInput) {
-    if(searchInput) {
-      attachHandlers();
-      searchInputWatch();
-      ctrl.sizeSearchInput();
-    }
-  });
+  ctrl.onInit(attachHandlers);
+  ctrl.onInit(ctrl.sizeSearchInput);
 
   function attachHandlers() {
     // Bind to keyboard shortcuts

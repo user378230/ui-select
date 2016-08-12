@@ -119,18 +119,6 @@ var uis = angular.module('ui.select', [])
   };
 })
 
-// Recreates old behavior of ng-transclude. Used internally.
-.directive('uisTranscludeAppend', function () {
-  return {
-    link: function (scope, element, attrs, ctrl, transclude) {
-        transclude(scope, function (clone) {
-          console.log(clone);
-          element.append(clone);
-        });
-      }
-    };
-})
-
 /**
  * Highlights text that matches $select.search.
  *
@@ -167,19 +155,71 @@ var uis = angular.module('ui.select', [])
     };
   };
 }])
-.factory('uisTemplateRequest', ['$injector', function($injector) {
-  var templateRequest;
-  // $templateRequest service is only availiable angular v1.3+
-  templateRequest = (function () {
-    try {
-      return $injector.get('$templateRequest');
-    } catch (err) {
-      // replace with substitute service
-      return {};
+/**
+ * Wrapper templateRequest service in order to support angular v1.2.X
+ * as the $templateRequest service was added in v1.3.0+
+ */
+.factory('uisTemplateRequest', 
+  ['$injector', 
+    function($injector) {
+      if($injector.has('$templateRequest')) {
+        return $injector.get('$templateRequest');
+      } else {
+        return $injector.get('uisTemplateRequestV12');
+      }
     }
-  })();
+])
 
-  return templateRequest;
+ /**
+  * Copy of $TemplateRequestProvider from angular.js
+  */
+.provider('uisTemplateRequestV12Provider',
+  [function uisTemplateRequestV12Provider() {
+
+    var httpOptions;
+
+    this.httpOptions = function(val) {
+      if (val) {
+        httpOptions = val;
+        return this;
+      }
+      return httpOptions;
+    };
+
+    this.$get = ['$templateCache', '$http', '$q', '$sce', function($templateCache, $http, $q, $sce) {
+
+      function handleRequestFn(tpl, ignoreRequestError) {
+        handleRequestFn.totalPendingRequests++;
+
+        if (!angular.isString(tpl) || angular.isUndefined($templateCache.get(tpl))) {
+          tpl = $sce.getTrustedResourceUrl(tpl);
+        }
+
+        return $http.get(tpl, angular.extend({
+            cache: $templateCache
+          }, httpOptions))
+          .finally(function() {
+            handleRequestFn.totalPendingRequests--;
+          })
+          .then(function(response) {
+            $templateCache.put(tpl, response.data);
+            return response.data;
+          }, handleError);
+
+        function handleError(resp) {
+          if (!ignoreRequestError) {
+            throw new Error('tpload', 
+            'Failed to load template: ' + tpl + ' (HTTP status: ' + resp.status + ' ' + resp.statusText + ')');
+          }
+          return $q.reject(resp);
+        }
+      }
+
+      handleRequestFn.totalPendingRequests = 0;
+
+      return handleRequestFn;
+    }
+  ];
 }])
   // .factory('uisAsyncCompilerFactory',
   //   ['uisTemplateRequest', '$templateCache', 

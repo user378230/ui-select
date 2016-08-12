@@ -81,7 +81,7 @@ uis.directive('uiSelect',
 
           element.append(templateElement);
 
-          postLink(scope, element, attrs, $select);
+          postLink(scope, element, attrs, ctrls);
 
         });
       }
@@ -102,8 +102,6 @@ uis.directive('uiSelect',
           $select.searchInput[0].id = tAttrs.inputId;
         }
 
-        $select.transclusionScope = scope.$parent;
-        
         $select.closeOnSelect = function() {
           if (angular.isDefined(attrs.closeOnSelect)) {
             return $parse(attrs.closeOnSelect)();
@@ -123,28 +121,15 @@ uis.directive('uiSelect',
         //Set reference to ngModel from uiSelectCtrl
         $select.ngModel = ngModel;
 
+        $select.initialized();
+
         $select.choiceGrouped = function(group){
           return $select.isGrouped && group && group.name;
         };
 
         if(attrs.tabindex){
           attrs.$observe('tabindex', function(value) {
-            if(!$select.focusInput) {
-              var focusInputWatch = scope.$watch(
-                function() { return $select.focusInput; }, 
-                function(focusInput) {
-                  if(focusInput) {
-                    copyTabIndex();
-                    focusInputWatch();
-                  }
-              });
-            } else {
-              copyTabIndex();
-            }
-            function copyTabIndex() {
-              $select.focusInput.attr('tabindex', value);
-              element.removeAttr('tabindex');
-            }
+            $select.tabindex = value;
           });
         }
 

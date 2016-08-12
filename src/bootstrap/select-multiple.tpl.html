@@ -13,7 +13,8 @@
            ng-model="$select.search"
            role="combobox"
            aria-label="{{ $select.baseTitle }}"
-           ondrop="return false;">
+           ondrop="return false;"
+           ng-attr-tabindex="{{$select.tabindex}}" />
   </div>
   <div class="ui-select-choices"></div>
   <div class="ui-select-no-choice"></div>

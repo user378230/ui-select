@@ -274,15 +274,15 @@ uis.directive('uiSelectMultiple', ['uiSelectMinErr','$timeout', function(uiSelec
         return true;
       }
 
-      var searchInputWatch = scope.$watch(function() { return $select.searchInput; }, function(searchInput) {
-        if(searchInput) {
+      $select.onInit(attachHandlers);
+      
+      function attachHandlers() {
           $select.searchInput.on('blur', onSearchInputBlur);
           $select.searchInput.on('keyup', searchInputKeyUp);
-          $select.searchInput.on('keydown', onKeyDown);
-          searchInputWatch(); 
+          $select.searchInput.on('keydown', onKeyDown); 
           $select.focusInput = $select.searchInput;
-        }
-      });
+      }
+
       function searchInputKeyUp(e) {
 
         if ( ! KEY.isVerticalMovement(e.which) ) {
