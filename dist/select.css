@@ -1,7 +1,7 @@
 /*!
  * ui-select
  * http://github.com/angular-ui/ui-select
- * Version: 0.19.1 - 2016-08-09T18:13:19.899Z
+ * Version: 0.19.2 - 2016-08-12T14:27:09.955Z
  * License: MIT
  */
 
@@ -156,17 +156,19 @@ body > .select2-container.open {
 }
 
 /* Fix Bootstrap dropdown position when inside a input-group */
-.input-group > .ui-select-bootstrap.dropdown {
+.input-group .ui-select-bootstrap .dropdown {
   /* Instead of relative */
   position: static;
 }
 
-.input-group > .ui-select-bootstrap > input.ui-select-search.form-control {
+/* Restore borders when ui-select is nested in an input-group */
+.input-group .ui-select-bootstrap input.ui-select-search.form-control,
+.input-group .ui-select-bootstrap .ui-select-match .form-control {
   border-radius: 4px; /* FIXME hardcoded value :-/ */
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
 }
-.input-group > .ui-select-bootstrap > input.ui-select-search.form-control.direction-up {
+.input-group .ui-select-bootstrap input.ui-select-search.form-control.direction-up {
   border-radius: 4px !important; /* FIXME hardcoded value :-/ */
   border-top-right-radius: 0 !important;
   border-bottom-right-radius: 0 !important;
@@ -181,19 +183,20 @@ body > .select2-container.open {
     border:0;
 }
 
-.ui-select-bootstrap > .ui-select-match > .btn{
+.ui-select-bootstrap .ui-select-match > .btn {
   /* Instead of center because of .btn */
   text-align: left !important;
 }
 
-.ui-select-bootstrap > .ui-select-match > .caret {
+.ui-select-bootstrap .ui-select-match > .caret {
   position: absolute;
   top: 45%;
   right: 15px;
 }
 
 /* See Scrollable Menu with Bootstrap 3 http://stackoverflow.com/questions/19227496 */
-.ui-select-bootstrap > .ui-select-choices ,.ui-select-bootstrap > .ui-select-no-choice {
+.ui-select-bootstrap .ui-select-choices,
+.ui-select-bootstrap .ui-select-no-choice {
   width: 100%;
   height: auto;
   max-height: 200px;

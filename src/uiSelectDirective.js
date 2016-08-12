@@ -9,6 +9,15 @@ uis.directive('uiSelect',
     scope: true,
     controller: 'uiSelectCtrl',
     controllerAs: '$select',
+    // Cannot use templateUrl as this existing contents would then be lost 
+    // once the template was loaded. Instead manually load the template as 
+    // a standard $http (or similar) request.
+    //
+    // When specifying a templateUrl, compilation of nested directives is 
+    // performed asynchronously. As we cannot specify the templateUrl the 
+    // asynchronous compilation has to be performed manually.
+    //
+    //
     compile: function(tElement, tAttrs) {
       
       var theme = tAttrs.theme || uiSelectConfig.theme;
@@ -55,9 +64,14 @@ uis.directive('uiSelect',
         choicesElem.attr('theme', theme);
         templateElement.querySelectorAll('.ui-select-choices').replaceWith(choicesElem);
 
+        var noChoiceElem = newContents.querySelectorAll('ui-select-no-choice');
+        if(noChoiceElem.length === 1) {
+          templateElement.attr('theme', theme);
+          templateElement.querySelectorAll('.ui-select-no-choice').replaceWith(noChoiceElem);
+        }
       }
 
-      function asyncPostLink(scope, element, attrs, ctrls, transcludeFn) {
+      function asyncPostLink(scope, element, attrs, ctrls) {
 
         uisTemplateRequest(templateUrl).then(function(template) {
           
@@ -71,14 +85,8 @@ uis.directive('uiSelect',
 
         });
       }
-     
-      //Multiple or Single depending if multiple attribute presence
-      
 
-      // if (tAttrs.inputId)
-      //   tElement.querySelectorAll('input.ui-select-search')[0].id = tAttrs.inputId;
-
-      function postLink(scope, element, attrs, ctrls, transcludeFn) {        
+      function postLink(scope, element, attrs, ctrls) {        
         var $select = ctrls[0];
         var ngModel = ctrls[1];
 
@@ -94,6 +102,8 @@ uis.directive('uiSelect',
           $select.searchInput[0].id = tAttrs.inputId;
         }
 
+        $select.transclusionScope = scope.$parent;
+        
         $select.closeOnSelect = function() {
           if (angular.isDefined(attrs.closeOnSelect)) {
             return $parse(attrs.closeOnSelect)();
@@ -264,29 +274,7 @@ uis.directive('uiSelect',
         // Move transcluded elements to their correct position in main template
 
         // transcludeFn(scope, function(clone) {
-        //   // See Transclude in AngularJS http://blog.omkarpatil.com/2012/11/transclude-in-angularjs.html
-
-        //   // One day jqLite will be replaced by jQuery and we will be able to write:
-        //   // var transcludedElement = clone.filter('.my-class')
-        //   // instead of creating a hackish DOM element:
-        //   var transcluded = angular.element('<div>').append(clone);
-
-        //   var transcludedMatch = transcluded.querySelectorAll('.ui-select-match');
-        //   transcludedMatch.removeAttr('ui-select-match'); //To avoid loop in case directive as attr
-        //   transcludedMatch.removeAttr('data-ui-select-match'); // Properly handle HTML5 data-attributes
-        //   if (transcludedMatch.length !== 1) {
-        //     throw uiSelectMinErr('transcluded', "Expected 1 .ui-select-match but got '{0}'.", transcludedMatch.length);
-        //   }
-        //   element.querySelectorAll('.ui-select-match').replaceWith(transcludedMatch);
-
-        //   var transcludedChoices = transcluded.querySelectorAll('.ui-select-choices');
-        //   transcludedChoices.removeAttr('ui-select-choices'); //To avoid loop in case directive as attr
-        //   transcludedChoices.removeAttr('data-ui-select-choices'); // Properly handle HTML5 data-attributes
-        //   if (transcludedChoices.length !== 1) {
-        //     throw uiSelectMinErr('transcluded', "Expected 1 .ui-select-choices but got '{0}'.", transcludedChoices.length);
-        //   }
-        //   element.querySelectorAll('.ui-select-choices').replaceWith(transcludedChoices);
-
+        
         //   var transcludedNoChoice = transcluded.querySelectorAll('.ui-select-no-choice');
         //   transcludedNoChoice.removeAttr('ui-select-no-choice'); //To avoid loop in case directive as attr
         //   transcludedNoChoice.removeAttr('data-ui-select-no-choice'); // Properly handle HTML5 data-attributes
