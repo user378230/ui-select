@@ -171,7 +171,7 @@ var uis = angular.module('ui.select', [])
 ])
 
  /**
-  * Copy of $TemplateRequestProvider from angular.js
+  * Copy of $TemplateRequestProvider from angular@v1.5.8
   */
 .provider('uisTemplateRequestV12Provider',
   [function uisTemplateRequestV12Provider() {
@@ -221,47 +221,78 @@ var uis = angular.module('ui.select', [])
     }
   ];
 }])
-  // .factory('uisAsyncCompilerFactory',
-  //   ['uisTemplateRequest', '$templateCache', 
-  //   function(uisTemplateRequest, $templateCache) {
-      
-  //     return {createFn: asyncCompilationFactory};
-      
-  //     function asyncCompilationFactory(templateUrl, preCompileFn, templateConfigurationFn, postLinkFn) {
-  //       preCompileFn();
+  .factory('uisAsyncCompilerFactory',
+    ['uisTemplateRequest', '$templateCache', '$compile',
+    function(uisTemplateRequest, $templateCache, $compile) {
+      /**
+       * templateUrl - The template to be loaded
+       * preCompileFn - Executed as part of the compile function, before any DOM manipulation has taken place
+       * templateConfigurationFn
+       *  - Executed once the template has been loaded (either from the cache or async from the network)
+       *  - function(templateElement, contents, tAttrs)
+       *    - templateElement - The template in DOM form
+       *    - contents - The original contents wrapped by the directive
+       *    - tAttrs - tAttrs argument from the compileFn
+       *    - The modified templateElement is appened to the DOM in place of the contents
+       * 
+       */
+      function asyncCompilationFactory(templateUrl, preCompileFn, templateConfigurationFn, linkFn1, linkFn2) {
 
-  //       if(angular.isDefined($templateCache.get(templateUrl))) {
-  //         // modify template and return normal link function
-  //         var templateElement = angular.element($templateCache.get(templateUrl));
+        var prePostLinkFn, postLinkFn;
+        if(arguments.length === 4) {
+          postLinkFn = linkFn1;
+        } else {
+          prePostLinkFn = linkFn1;
+          postLinkFn = linkFn2;
+        }
+
+        return function asyncCompileFn(tElement, tAttrs) {
+
+          var url = templateUrl;
+          if(angular.isFunction(templateUrl)) {
+            url = templateUrl(tElement, tAttrs);
+          }
+
+          if(preCompileFn) {
+            preCompileFn(tElement, tAttrs);
+          }
           
-  //         templateConfigurationFn(templateElement);
-          
-  //         tElement.append(templateElement);
+          var contents = angular.element('<div>').append(tElement.contents());
+          tElement.empty();
 
-  //         return postLinkFn;
-  //       } else {
-  //         // return link function that requests template and modifies result
-  //         return function asyncPostLink(scope, element, attrs, $select) {
-  //           uisTemplateRequest(templateUrl).then(function(template) {
-  //             var templateElement = angular.element(template);
+          if(angular.isDefined($templateCache.get(url))) {
 
-  //             templateConfigurationFn(templateElement);
-              
-  //             $compile(templateElement)(scope);
+            // modify template and return normal link function
+            var templateElement = angular.element($templateCache.get(url));
+            
+            templateConfigurationFn(templateElement, contents, tAttrs);
+            
+            tElement.append(templateElement);
 
-  //             element.append(templateElement);
+            return postLinkFn;
+          } else {
+            // return link function that requests template and modifies result
+            return function asyncPostLink(scope, element, attrs, $select) {
 
-  //             postLink(scope, element, attrs, $select);
-  //           });
-  //         };
-  //       }
+              prePostLinkFn.call(null, arguments)
+              uisTemplateRequest(url).then(function(template) {
+                var templateElement = angular.element(template);
 
+                templateConfigurationFn(templateElement, element, tAttrs);
+                
+                $compile(templateElement)(scope);
 
-  //     }
+                element.append(templateElement);
 
-      
-  //   }]
-  // )
-  ;
+                postLinkFn(scope, element, attrs, $select);
+              });
+            };
+          }
+        } 
+      }
+
+      return asyncCompilationFactory;
+    }]
+  );
 
 

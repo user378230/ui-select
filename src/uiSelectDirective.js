@@ -41,13 +41,10 @@ uis.directive('uiSelect',
         return asyncPostLink;
       }
 
-      function configureTemplate(templateElement, newContents) {
-        if (angular.isDefined(tAttrs.multiple)) {
-          templateElement.append('<ui-select-multiple/>').removeAttr('multiple');
-        } else {
-          templateElement.append('<ui-select-single/>');
-        }
-
+      function configureTemplate(templateElement, newContents, tAttrs) {
+        var selectDirective = '<ui-select-' + angular.isDefined(tAttrs.multiple) ? 'multiple' : 'single' + '/>';
+        templateElement.append(selectDirective);
+        
         // perform checks for matchElem/choicesElem and data-attrs..
         var matchElem = newContents.querySelectorAll('ui-select-match');
         if(matchElem.length !== 1) {
