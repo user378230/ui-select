@@ -214,27 +214,29 @@ uis.controller('uiSelectCtrl',
     ctrl.isGrouped = !!groupByExp;
     ctrl.itemProperty = ctrl.parserResult.itemName;
 
-    //If collection is an Object, convert it to Array
+    
+    // If collection is an Object, convert it to Array
+    // Check for (key,value) syntax
+    if (ctrl.parserResult.keyName) { 
 
-    var originalSource = ctrl.parserResult.source;
+      var originalSource = ctrl.parserResult.source;
 
-    //When an object is used as source, we better create an array and use it as 'source'
-    var createArrayFromObject = function(){
-      var origSrc = originalSource($scope);
-      $scope.$uisSource = Object.keys(origSrc).map(function(v){
-        var result = {};
-        result[ctrl.parserResult.keyName] = v;
-        result.value = origSrc[v];
-        return result;
-      });
-    };
-
-    if (ctrl.parserResult.keyName){ // Check for (key,value) syntax
       createArrayFromObject();
       ctrl.parserResult.source = $parse('$uisSource' + ctrl.parserResult.filters);
       $scope.$watch(originalSource, function(newVal, oldVal){
         if (newVal !== oldVal) createArrayFromObject();
       }, true);
+
+      //When an object is used as source, we better create an array and use it as 'source'
+      function createArrayFromObject(){
+        var origSrcValue = originalSource($scope);
+        $scope.$uisSource = Object.keys(origSrcValue).map(function(key){
+          var result = {};
+          result[ctrl.parserResult.keyName] = key;
+          result[ctrl.parserResult.itemName] = origSrcValue[key];
+          return result;
+        });
+      }
     }
 
     ctrl.refreshItems = function (data){

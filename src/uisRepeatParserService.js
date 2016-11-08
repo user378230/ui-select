@@ -37,7 +37,7 @@ uis.service('uisRepeatParser', ['uiSelectMinErr','$parse', function(uiSelectMinE
     // 6 Track by
 
     if (!match) {
-      throw uiSelectMinErr('iexp', "Expected expression in form of '_item_ in _collection_[ track by _id_]' but got '{0}'.",
+      throw uiSelectMinErr('iexp', "Expected expression in form of '[_alias_ as ] _item_ in _collection_[ track by _id_]' but got '{0}'.",
               expression);
     }
     
@@ -58,12 +58,27 @@ uis.service('uisRepeatParser', ['uiSelectMinErr','$parse', function(uiSelectMinE
       }      
     }
 
+    var itemName = match[4] || match[2];
+    var keyName = match[3];
+    
+    var getLocals = keyName ? function(item, key) {
+      var locals = {};
+      locals[keyName] = key;
+      locals[itemName] = item;
+      return locals;
+    } : function(item) {
+      var locals = {};
+      locals[itemName] = item;
+      return locals;
+    }
+    
     return {
       itemName: match[4] || match[2], // (lhs) Left-hand side,
       keyName: match[3], //for (key, value) syntax
       source: $parse(source),
       filters: filters,
       trackByExp: match[6],
+      getTrackByFn: getTrackByFn,
       modelMapper: $parse(match[1] || match[4] || match[2]),
       repeatExpression: function (grouped) {
         var expression = this.itemName + ' in ' + (grouped ? '$group.items' : '$select.items');
